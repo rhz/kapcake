@@ -172,10 +172,15 @@ Notation "s1 -- s2" := ((s1, s2)) (in custom edge at level 2,
 End SGNotations.
 Import SGNotations.
 
+(* Example uses of the above notations. *)
 Definition g1 := [| 0, 1 |].
 Definition g2 := [| 0, 1 | 0 -> 0, 1 -> 1 |].
 Definition g3 := [| 0, 1 | 0 -> 0, 1 -> 1 | 0 -- 1 |].
 
+(* One says site graph `g` is realisable iff
+   (i) no site has an edge to itself and
+   (ii) sites have at most one incident edge.
+ *)
 Definition noLoop (g: SG) : Prop :=
   forall x y, In (x, y) (edges g) -> x <> y.
 
@@ -186,6 +191,9 @@ Definition atMost1IncidentEdge (g: SG) : Prop := forall x x' y,
 Definition isRealisable (g: SG) : Prop :=
     noLoop g /\ atMost1IncidentEdge g.
 
+(* As an example, we show that `g3` is realisable.
+   TODO: create a tactic that solves this kind of proofs.
+ *)
 Example g3_is_realisable : isRealisable g3.
 Proof.
   unfold isRealisable, noLoop, atMost1IncidentEdge. cbn. split.
