@@ -1,0 +1,204 @@
+Require Import Program.
+From Coq Require Import Lists.List.
+Import ListNotations.
+From Coq Require Import Bool.Bool.
+From Coq Require Import Arith.Arith.
+From Coq Require Import MSets.
+From KapCake Require Import NatMap.
+Import NatMap.PartialMapNotation.
+From RecordUpdate Require Import RecordSet.
+Import RecordSetNotations.
+
+Module NatSet := Make Nat_as_OT.
+Module D := MSetDecide.Decide NatSet.
+
+Lemma eqbP : forall n m, reflect (n = m) (n =? m).
+Proof. intros n m. apply iff_reflect. rewrite Nat.eqb_eq.
+       reflexivity. Qed.
+
+(***** Site graphs *****)
+
+(* A site graph G consists of
+   a finite set of agents A_G,
+   a finite set of sites S_G,
+   a map σ_G : S_G -> A_G that assigns sites to agents and
+   a symmetric edge relation E_G on S_G .
+ *)
+Record SG : Type :=
+  mkSG
+    { nodes : NatSet.t
+    ; sites : NatSet.t
+    ; siteMap : NatMap.partial nat
+    ; edges : list (nat * nat)
+    }.
+#[local] Instance etaSG : Settable _ :=
+  settable! mkSG <nodes; sites; siteMap; edges>.
+
+(* Here we are representing the edge relation E_G as
+   a list of pairs of nats and we prove for each concrete site graph
+   that the relation is symmetric.
+ *)
+Definition edges_is_symmetric (g: SG) : Prop :=
+  forall s1 s2, In (s1, s2) (edges g) -> In (s2, s1) (edges g).
+
+(* Also, in this representation we chose a partial map
+   from nat to nat (NatMap.partial nat) to represent a total map
+   from S_G to A_G since S_G and A_G are not Sets in Coq.
+   For each concrete site graph we can prove that the partial map
+   is indeed total and its image is indeed in A_G.
+ *)
+Definition siteMap_is_total (g: SG) : Prop :=
+  forall s, NatSet.In s (sites g) -> exists u,
+      NatSet.In u (nodes g) /\ siteMap g s = Some u.
+
+(* We define the empty site graph that has
+   no nodes, no sites, and no edges. *)
+Program Definition empty :=
+  {| nodes := NatSet.empty
+  ;  sites := NatSet.empty
+  ;  siteMap := NatMap.empty
+  ;  edges := []
+  |}.
+
+(* And we prove that the empty site graph
+   satisfies the two properties above.
+ *)
+Lemma empty_edges_is_symmetric : edges_is_symmetric empty.
+Proof. unfold edges_is_symmetric. cbn. intros s1 s2 H. apply H. Qed.
+
+Lemma empty_siteMap_is_total : siteMap_is_total empty.
+Proof. unfold siteMap_is_total. cbn. D.fsetdec. Qed.
+
+(* We have some functions to grow site graphs.
+   First a function to add a node `u` to a site graph `g`.
+ *)
+Definition addNode u (g: SG) : SG :=
+  set nodes (fun us => NatSet.add u us) g.
+
+(* Second, a function to add a site `s` to a node `u`
+   in a site graph `g`. *)
+Definition addSite s toNode g :=
+  set siteMap (fun sm => s |-> toNode ; sm)
+    (set sites (fun ss => NatSet.add s ss) g).
+
+(* And third, a function to add an edge
+   between sites `s1` and `s2` in site graph `g`. *)
+Definition addEdge s1 s2 g :=
+  set edges (fun es => if s1 =? s2 then (s1, s1) :: es
+                       else (s2, s1) :: (s1, s2) :: es) g.
+
+(* Now we prove that these operations
+   preserve the two properties above. *)
+Lemma addNode_pres_edges_is_symmetric : forall u g,
+    edges_is_symmetric g -> edges_is_symmetric (addNode u g).
+Proof. unfold edges_is_symmetric. intros u g H s1 s2. cbn. apply H.
+Qed.
+
+Lemma addSite_pres_edges_is_symmetric : forall s u g,
+    edges_is_symmetric g -> edges_is_symmetric (addSite s u g).
+Proof. unfold edges_is_symmetric. intros s u g H s1 s2. cbn. apply H.
+Qed.
+
+Lemma addEdge_pres_edges_is_symmetric : forall s1 s2 g,
+    edges_is_symmetric g -> edges_is_symmetric (addEdge s1 s2 g).
+Proof.
+  unfold edges_is_symmetric. intros s1 s2 g H s3 s4. cbn.
+  destruct (eqbP s1 s2) as [eq_s1s2 | neq_s1s2].
+  - cbn. intros [H1|H2].
+    + left. inversion H1. reflexivity.
+    + right. apply H. apply H2.
+  - cbn. intros [H1|[H2|H3]].
+    + right. left. inversion H1. reflexivity.
+    + left. inversion H2. reflexivity.
+    + right. right. apply H. apply H3.
+Qed.
+
+Lemma addNode_pres_siteMap_is_total : forall u g,
+    siteMap_is_total g -> siteMap_is_total (addNode u g).
+Proof.
+  unfold siteMap_is_total. cbn. intros u g H s sInG.
+  destruct (H s sInG) as [u' [H1 H2]].
+  exists u'. split. D.fsetdec. apply H2.
+Qed.
+
+Lemma addSite_pres_siteMap_is_total : forall s u g,
+    NatSet.In u (nodes g) ->
+    siteMap_is_total g ->
+    siteMap_is_total (addSite s u g).
+Proof.
+  unfold siteMap_is_total. cbn. intros s u g uInG H s1 s1InG.
+  destruct (eqbP s s1) as [eq_ss1 | neq_ss1].
+  - exists u. split.
+    + apply uInG.
+    + rewrite eq_ss1. apply NatMap.update_eq.
+  - destruct (H s1) as [u' [H1 H2]].
+    + apply (D.F.add_3 neq_ss1). apply s1InG.
+    + exists u'. split.
+      * apply H1.
+      * rewrite NatMap.update_neq. apply H2. apply neq_ss1.
+Qed.
+
+Lemma addEdge_pres_siteMap_is_total : forall s1 s2 g,
+    siteMap_is_total g -> siteMap_is_total (addEdge s1 s2 g).
+Proof.
+  unfold siteMap_is_total. cbn. intros _ _ g H s sInG.
+  destruct (H s sInG) as [u' [H1 H2]].
+  exists u'. split. apply H1. apply H2.
+Qed.
+
+(* Notations *)
+Module SGNotations.
+Notation "[| u , .. , v |]" :=
+  (addNode v .. (addNode u empty) ..)
+    (at level 0).
+
+Declare Custom Entry siteMapping.
+Notation "[| u , .. , v | s1 , .. , s2 |]" :=
+  (let g := (addNode v .. (addNode u empty) ..) in
+   (addSite (fst s2) (snd s2) .. (addSite (fst s1) (snd s2) g) ..))
+    (at level 0, s1 custom siteMapping, s2 custom siteMapping).
+Notation "s -> u" := ((s, u)) (in custom siteMapping at level 2,
+                           s constr at level 1, u constr at level 1).
+
+Declare Custom Entry edge.
+Notation "[| u , .. , v | s1 , .. , s2 | e1 , .. , e2 |]" :=
+  (let g1 := (addNode v .. (addNode u empty) ..) in
+   let g2 := (addSite (fst s2) (snd s2) ..
+                (addSite (fst s1) (snd s2) g1) ..)
+   in (addEdge (fst e2) (snd e2) .. (addEdge (fst e1) (snd e1) g2) ..))
+        (at level 0, s1 custom siteMapping, s2 custom siteMapping,
+          e1 custom edge, e2 custom edge).
+Notation "s1 -- s2" := ((s1, s2)) (in custom edge at level 2,
+                             s1 constr at level 1, s2 constr at level 1).
+End SGNotations.
+Import SGNotations.
+
+Definition g1 := [| 0, 1 |].
+Definition g2 := [| 0, 1 | 0 -> 0, 1 -> 1 |].
+Definition g3 := [| 0, 1 | 0 -> 0, 1 -> 1 | 0 -- 1 |].
+
+Definition noLoop (g: SG) : Prop :=
+  forall x y, In (x, y) (edges g) -> x <> y.
+
+Definition atMost1IncidentEdge (g: SG) : Prop := forall x x' y,
+    In (x , y) (edges g) ->
+    In (x', y) (edges g) -> x = x'.
+
+Definition isRealisable (g: SG) : Prop :=
+    noLoop g /\ atMost1IncidentEdge g.
+
+Example g3_is_realisable : isRealisable g3.
+Proof.
+  unfold isRealisable, noLoop, atMost1IncidentEdge. cbn. split.
+  - intros x y [H|[H|H]].
+    (* there should be a tactic to split the In and
+       create hypotheses of the form x = 0 (instead of 0 = x). *)
+    + inversion H. discriminate.
+    + inversion H. discriminate.
+    + exfalso. apply H.
+  - intros x x' y [H1|[H1|H1]] [H2|[H2|H2]];
+      try (inversion H1; inversion H2; reflexivity);
+      try (inversion H1; inversion H2; rewrite <- H3 in H5; apply H5);
+      try (exfalso; apply H2).
+Qed.
+
