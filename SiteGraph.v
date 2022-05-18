@@ -1,4 +1,3 @@
-Require Import Program.
 From Coq Require Import Lists.List.
 Import ListNotations.
 From Coq Require Import Bool.Bool.
@@ -53,7 +52,7 @@ Definition siteMap_is_total (g: SG) : Prop :=
 
 (* We define the empty site graph that has
    no nodes, no sites, and no edges. *)
-Program Definition empty :=
+Definition empty :=
   {| nodes := NatSet.empty
   ;  sites := NatSet.empty
   ;  siteMap := NatMap.empty
