@@ -4,6 +4,10 @@ From Coq Require Import Logic.FunctionalExtensionality.
 
 Module NatMap.
 
+(* This file has been derived from
+   https://softwarefoundations.cis.upenn.edu/lf-current/Maps.html
+ *)
+
 (***** Total maps *****)
 
 Definition total (A : Type) := nat -> A.

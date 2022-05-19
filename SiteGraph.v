@@ -50,6 +50,12 @@ Definition siteMap_is_total (g: SG) : Prop :=
   forall s, NatSet.In s (sites g) -> exists u,
       NatSet.In u (nodes g) /\ siteMap g s = Some u.
 
+(* These two properties together are necessary
+   for site graph `g` to be proper.
+ *)
+Definition is_proper (g: SG) : Prop :=
+    edges_is_symmetric g /\ siteMap_is_total g.
+
 (* We define the empty site graph that has
    no nodes, no sites, and no edges. *)
 Definition empty :=
@@ -68,8 +74,11 @@ Proof. unfold edges_is_symmetric. cbn. intros s1 s2 H. apply H. Qed.
 Lemma empty_siteMap_is_total : siteMap_is_total empty.
 Proof. unfold siteMap_is_total. cbn. D.fsetdec. Qed.
 
+Corollary empty_is_proper : is_proper empty.
+Proof. split. apply empty_edges_is_symmetric. apply empty_siteMap_is_total. Qed.
+
 (* We have some functions to grow site graphs.
-   First a function to add a node `u` to a site graph `g`.
+   First, a function to add a node `u` to a site graph `g`.
  *)
 Definition addNode u (g: SG) : SG :=
   set nodes (fun us => NatSet.add u us) g.
@@ -188,15 +197,15 @@ Definition atMost1IncidentEdge (g: SG) : Prop := forall x x' y,
     In (x , y) (edges g) ->
     In (x', y) (edges g) -> x = x'.
 
-Definition isRealisable (g: SG) : Prop :=
+Definition is_realisable (g: SG) : Prop :=
     noLoop g /\ atMost1IncidentEdge g.
 
 (* As an example, we show that `g3` is realisable.
    TODO: create a tactic that solves this kind of proofs.
  *)
-Example g3_is_realisable : isRealisable g3.
+Example g3_is_realisable : is_realisable g3.
 Proof.
-  unfold isRealisable, noLoop, atMost1IncidentEdge. cbn. split.
+  unfold is_realisable, noLoop, atMost1IncidentEdge. cbn. split.
   - intros x y [H|[H|H]].
     (* there should be a tactic to split the In and
        create hypotheses of the form x = 0 (instead of 0 = x). *)
