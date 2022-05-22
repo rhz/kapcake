@@ -5,6 +5,7 @@ From Coq Require Import Arith.Arith.
 From Coq Require Import MSets.
 From KapCake Require Import NatMap.
 Import NatMap.PartialMapNotation.
+From KapCake Require Import Tactics.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 
@@ -33,6 +34,8 @@ Record SG : Type :=
 #[local] Instance etaSG : Settable _ :=
   settable! mkSG <nodes; sites; siteMap; edges>.
 
+Create HintDb site_graphs.
+
 (* Here we are representing the edge relation E_G as
    a list of pairs of nats and we prove for each concrete site graph
    that the relation is symmetric.
@@ -50,11 +53,17 @@ Definition siteMap_is_total (g: SG) : Prop :=
   forall s, NatSet.In s (sites g) -> exists u,
       NatSet.In u (nodes g) /\ siteMap g s = Some u.
 
-(* These two properties together are necessary
-   for site graph `g` to be proper.
+(* These two properties are guaranteed in the mathematical
+   representation but not in the computational one.
+   When the computational representation of a site graph `g`
+   satisfies these two properties, we say that `g` is proper.
  *)
 Definition is_proper (g: SG) : Prop :=
     edges_is_symmetric g /\ siteMap_is_total g.
+
+#[export]
+Hint Unfold is_proper siteMap_is_total edges_is_symmetric :
+  site_graphs.
 
 (* We define the empty site graph that has
    no nodes, no sites, and no edges. *)
@@ -198,23 +207,29 @@ Definition atMost1IncidentEdge (g: SG) : Prop := forall x x' y,
     In (x', y) (edges g) -> x = x'.
 
 Definition is_realisable (g: SG) : Prop :=
-    noLoop g /\ atMost1IncidentEdge g.
+  noLoop g /\ atMost1IncidentEdge g /\ is_proper g.
 
-(* As an example, we show that `g3` is realisable.
-   TODO: create a tactic that solves this kind of proofs.
- *)
+#[export]
+Hint Unfold is_realisable noLoop atMost1IncidentEdge : site_graphs.
+
+Ltac node_exists :=
+  match goal with |- exists u, _ /\ Some ?x = Some u =>
+   exists x end.
+
+Tactic Notation "auto_smit" hyp(H) :=
+  simpl in H; rewrite ?D.F.add_iff in H; rewrite D.F.empty_iff in H;
+  branches H; solve [ substs; cbn; node_exists; split;
+                      rewrite ?D.F.add_iff; auto;
+                      reflexivity
+                    | false ].
+
+(* As an example, we show that `g3` is realisable. *)
 Example g3_is_realisable : is_realisable g3.
 Proof.
-  unfold is_realisable, noLoop, atMost1IncidentEdge. cbn. split.
-  - intros x y [H|[H|H]].
-    (* there should be a tactic to split the In and
-       create hypotheses of the form x = 0 (instead of 0 = x). *)
-    + inversion H. discriminate.
-    + inversion H. discriminate.
-    + exfalso. apply H.
-  - intros x x' y [H1|[H1|H1]] [H2|[H2|H2]];
-      try (inversion H1; inversion H2; reflexivity);
-      try (inversion H1; inversion H2; rewrite <- H3 in H5; apply H5);
-      try (exfalso; apply H2).
+  autounfold with site_graphs. splits.
+  - introv H. pairsInList H then_ discriminate.
+  - introv H1 H2. pairsInList H1, H2 then_ reflexivity.
+  - introv H. cbn. pairsInList H then_ auto.
+  - introv H. cbn. auto_smit H.
 Qed.
 
