@@ -1,20 +1,15 @@
-From Coq Require Import Lists.List.
-Import ListNotations.
+(* From Coq Require Import Lists.List. *)
+(* Import ListNotations. *)
 From Coq Require Import Bool.Bool.
-From Coq Require Import Arith.Arith.
-From Coq Require Import MSets.
+(* From Coq Require Import Arith.Arith. *)
+(* From Coq Require Import MSets. *)
+From KapCake Require Import Rel.
 From KapCake Require Import NatMap.
 Import NatMap.PartialMapNotation.
+From KapCake Require Import NatSet.
 From KapCake Require Import Tactics.
 From RecordUpdate Require Import RecordSet.
-Import RecordSetNotations.
-
-Module NatSet := Make Nat_as_OT.
-Module D := MSetDecide.Decide NatSet.
-
-Lemma eqbP : forall n m, reflect (n = m) (n =? m).
-Proof. intros n m. apply iff_reflect. rewrite Nat.eqb_eq.
-       reflexivity. Qed.
+(* Import RecordSetNotations. *)
 
 (***** Site graphs *****)
 
@@ -29,41 +24,48 @@ Record SG : Type :=
     { nodes : NatSet.t
     ; sites : NatSet.t
     ; siteMap : NatMap.partial nat
-    ; edges : list (nat * nat)
+    ; edges : Rel.t nat
     }.
-#[local] Instance etaSG : Settable _ :=
+#[export] Instance etaSG : Settable _ :=
   settable! mkSG <nodes; sites; siteMap; edges>.
+
+Definition SG_to_NatSetMap (sg : SG) : NatSetMap.t :=
+  {| NatSetMap.dom := sites sg
+  ;  NatSetMap.cod := nodes sg
+  ;  NatSetMap.map := siteMap sg |}.
+Coercion SG_to_NatSetMap : SG >-> NatSetMap.t.
+
+Definition SG_to_NatSetRel (sg : SG) : NatSetRel.t :=
+  {| NatSetRel.over := sites sg
+  ;  NatSetRel.rel := edges sg |}.
+Coercion SG_to_NatSetRel : SG >-> NatSetRel.t.
 
 Create HintDb site_graphs.
 
 (* Here we are representing the edge relation E_G as
-   a list of pairs of nats and we prove for each concrete site graph
-   that the relation is symmetric.
- *)
-Definition edges_is_symmetric (g: SG) : Prop :=
-  forall s1 s2, In (s1, s2) (edges g) -> In (s2, s1) (edges g).
+   a list of pairs of nats and we prove for each
+   concrete site graph that all pairs are in S_G
+   and that the relation is symmetric.
 
-(* Also, in this representation we chose a partial map
-   from nat to nat (NatMap.partial nat) to represent a total map
-   from S_G to A_G since S_G and A_G are not Sets in Coq.
+   Also, in this representation we chose a partial map
+   from `nat` to `nat` (`NatMap.partial nat`) to represent a
+   total map from S_G to A_G since S_G and A_G are not Sets in Coq.
    For each concrete site graph we can prove that the partial map
    is indeed total and its image is indeed in A_G.
- *)
-Definition siteMap_is_total (g: SG) : Prop :=
-  forall s, NatSet.In s (sites g) -> exists u,
-      NatSet.In u (nodes g) /\ siteMap g s = Some u.
 
-(* These two properties are guaranteed in the mathematical
+   These 3 properties are guaranteed in the mathematical
    representation but not in the computational one.
    When the computational representation of a site graph `g`
-   satisfies these two properties, we say that `g` is proper.
+   satisfies these 3 properties, we say that `g` is proper.
  *)
 Definition is_proper (g: SG) : Prop :=
-    edges_is_symmetric g /\ siteMap_is_total g.
+  NatSetMap.is_total g /\
+  NatSetRel.in_dom g /\
+  Rel.is_symmetric (edges g).
 
 #[export]
-Hint Unfold is_proper siteMap_is_total edges_is_symmetric :
-  site_graphs.
+Hint Unfold is_proper NatSetMap.is_total
+  NatSetRel.in_dom Rel.is_symmetric : site_graphs.
 
 (* We define the empty site graph that has
    no nodes, no sites, and no edges. *)
@@ -71,20 +73,27 @@ Definition empty :=
   {| nodes := NatSet.empty
   ;  sites := NatSet.empty
   ;  siteMap := NatMap.empty
-  ;  edges := []
+  ;  edges := Rel.empty
   |}.
 
 (* And we prove that the empty site graph
-   satisfies the two properties above.
+   satisfies the 3 properties above.
  *)
-Lemma empty_edges_is_symmetric : edges_is_symmetric empty.
-Proof. unfold edges_is_symmetric. cbn. intros s1 s2 H. apply H. Qed.
+Lemma empty_siteMap_is_total : NatSetMap.is_total empty.
+Proof. exact NatSetMap.empty_is_total. Qed.
 
-Lemma empty_siteMap_is_total : siteMap_is_total empty.
-Proof. unfold siteMap_is_total. cbn. D.fsetdec. Qed.
+Lemma empty_edges_in_dom : NatSetRel.in_dom empty.
+Proof. cbn. exact NatSetRel.empty_in_dom. Qed.
+
+Lemma empty_edges_is_symmetric : Rel.is_symmetric (edges empty).
+Proof. cbn. exact Rel.empty_is_symmetric. Qed.
 
 Corollary empty_is_proper : is_proper empty.
-Proof. split. apply empty_edges_is_symmetric. apply empty_siteMap_is_total. Qed.
+Proof. splits.
+       - apply empty_siteMap_is_total.
+       - apply empty_edges_in_dom.
+       - apply empty_edges_is_symmetric.
+Qed.
 
 (* We have some functions to grow site graphs.
    First, a function to add a node `u` to a site graph `g`.
@@ -105,31 +114,7 @@ Definition addEdge s1 s2 g :=
                        else (s2, s1) :: (s1, s2) :: es) g.
 
 (* Now we prove that these operations
-   preserve the two properties above. *)
-Lemma addNode_pres_edges_is_symmetric : forall u g,
-    edges_is_symmetric g -> edges_is_symmetric (addNode u g).
-Proof. unfold edges_is_symmetric. intros u g H s1 s2. cbn. apply H.
-Qed.
-
-Lemma addSite_pres_edges_is_symmetric : forall s u g,
-    edges_is_symmetric g -> edges_is_symmetric (addSite s u g).
-Proof. unfold edges_is_symmetric. intros s u g H s1 s2. cbn. apply H.
-Qed.
-
-Lemma addEdge_pres_edges_is_symmetric : forall s1 s2 g,
-    edges_is_symmetric g -> edges_is_symmetric (addEdge s1 s2 g).
-Proof.
-  unfold edges_is_symmetric. intros s1 s2 g H s3 s4. cbn.
-  destruct (eqbP s1 s2) as [eq_s1s2 | neq_s1s2].
-  - cbn. intros [H1|H2].
-    + left. inversion H1. reflexivity.
-    + right. apply H. apply H2.
-  - cbn. intros [H1|[H2|H3]].
-    + right. left. inversion H1. reflexivity.
-    + left. inversion H2. reflexivity.
-    + right. right. apply H. apply H3.
-Qed.
-
+   preserve the 3 properties above. *)
 Lemma addNode_pres_siteMap_is_total : forall u g,
     siteMap_is_total g -> siteMap_is_total (addNode u g).
 Proof.
@@ -161,6 +146,30 @@ Proof.
   unfold siteMap_is_total. cbn. intros _ _ g H s sInG.
   destruct (H s sInG) as [u' [H1 H2]].
   exists u'. split. apply H1. apply H2.
+Qed.
+
+Lemma addNode_pres_edges_is_symmetric : forall u g,
+    edges_is_symmetric g -> edges_is_symmetric (addNode u g).
+Proof. unfold edges_is_symmetric. intros u g H s1 s2. cbn. apply H.
+Qed.
+
+Lemma addSite_pres_edges_is_symmetric : forall s u g,
+    edges_is_symmetric g -> edges_is_symmetric (addSite s u g).
+Proof. unfold edges_is_symmetric. intros s u g H s1 s2. cbn. apply H.
+Qed.
+
+Lemma addEdge_pres_edges_is_symmetric : forall s1 s2 g,
+    edges_is_symmetric g -> edges_is_symmetric (addEdge s1 s2 g).
+Proof.
+  unfold edges_is_symmetric. intros s1 s2 g H s3 s4. cbn.
+  destruct (eqbP s1 s2) as [eq_s1s2 | neq_s1s2].
+  - cbn. intros [H1|H2].
+    + left. inversion H1. reflexivity.
+    + right. apply H. apply H2.
+  - cbn. intros [H1|[H2|H3]].
+    + right. left. inversion H1. reflexivity.
+    + left. inversion H2. reflexivity.
+    + right. right. apply H. apply H3.
 Qed.
 
 (* Notations *)
@@ -232,4 +241,3 @@ Proof.
   - introv H. cbn. pairsInList H then_ auto.
   - introv H. cbn. auto_smit H.
 Qed.
-
