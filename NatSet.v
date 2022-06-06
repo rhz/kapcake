@@ -54,9 +54,6 @@ Proof.
   split. apply D.F.add_2. apply H1. apply H2.
 Qed.
 
-(* Definition is_total_b (m : t) (dom cod : NatSet.t) : bool := *)
-(*   NatSet.for_all (is_some * m) dom. *)
-
 Definition is_total_b (m : t) (dom cod : NatSet.t) : bool :=
   NatSet.for_all (fun x => match m x with
                            | None => false
@@ -101,23 +98,6 @@ Proof.
   introv. apply iff_reflect.
   rewrite is_total_spec. reflexivity.
 Qed.
-
-(*
-Lemma update_pres_is_total' : forall m dom cod x v,
-    NatSet.In x dom ->
-    NatSet.In v cod ->
-    is_total m dom cod ->
-    is_total (x |-> v; m) dom cod.
-Proof.
-  introv xInDom vInCod. rewrite ?is_total_spec.
-  unfold is_total_b. rewrite ?NatSet.for_all_spec; try solve_proper.
-  unfold NatSet.For_all. intros H x' x'InDom.
-  destruct (eqbP x x') as [eq_xx' | neq_xx'].
-  - rewrite eq_xx'. rewrite update_eq.
-    apply NatSet.mem_spec. apply vInCod.
-  - rewrite update_neq. apply (H x' x'InDom). apply neq_xx'.
-Qed.
- *)
 
 End NatMap.
 
