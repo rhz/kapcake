@@ -3,10 +3,8 @@
 From Coq Require Import Bool.Bool.
 (* From Coq Require Import Arith.Arith. *)
 (* From Coq Require Import MSets. *)
-From KapCake Require Import Rel.
-From KapCake Require Import NatMap.
-Import NatMap.PartialMapNotation.
 From KapCake Require Import NatSet.
+Import NatMap.PartialMapNotation.
 From KapCake Require Import Tactics.
 From RecordUpdate Require Import RecordSet.
 (* Import RecordSetNotations. *)
@@ -23,22 +21,11 @@ Record SG : Type :=
   mkSG
     { nodes : NatSet.t
     ; sites : NatSet.t
-    ; siteMap : NatMap.partial nat
-    ; edges : Rel.t nat
+    ; siteMap : NatMap.t
+    ; edges : NatSRel.t
     }.
 #[export] Instance etaSG : Settable _ :=
   settable! mkSG <nodes; sites; siteMap; edges>.
-
-Definition SG_to_NatSetMap (sg : SG) : NatSetMap.t :=
-  {| NatSetMap.dom := sites sg
-  ;  NatSetMap.cod := nodes sg
-  ;  NatSetMap.map := siteMap sg |}.
-Coercion SG_to_NatSetMap : SG >-> NatSetMap.t.
-
-Definition SG_to_NatSetRel (sg : SG) : NatSetRel.t :=
-  {| NatSetRel.over := sites sg
-  ;  NatSetRel.rel := edges sg |}.
-Coercion SG_to_NatSetRel : SG >-> NatSetRel.t.
 
 Create HintDb site_graphs.
 
@@ -48,10 +35,12 @@ Create HintDb site_graphs.
    and that the relation is symmetric.
 
    Also, in this representation we chose a partial map
-   from `nat` to `nat` (`NatMap.partial nat`) to represent a
-   total map from S_G to A_G since S_G and A_G are not Sets in Coq.
-   For each concrete site graph we can prove that the partial map
-   is indeed total and its image is indeed in A_G.
+   from `nat` to `nat` (`NatMap.partial nat` or `NatMap.t`)
+   to represent a total map from S_G to A_G
+   since S_G and A_G are not Sets in Coq.
+   For each concrete site graph we can prove
+   that the partial map is indeed total
+   and its image is indeed in A_G.
 
    These 3 properties are guaranteed in the mathematical
    representation but not in the computational one.
@@ -59,13 +48,13 @@ Create HintDb site_graphs.
    satisfies these 3 properties, we say that `g` is proper.
  *)
 Definition is_proper (g: SG) : Prop :=
-  NatSetMap.is_total g /\
-  NatSetRel.in_dom g /\
-  Rel.is_symmetric (edges g).
+  NatMap.is_total (siteMap g) (sites g) (nodes g) /\
+  NatSRel.in_dom (edges g) (sites g) /\
+  NatSRel.is_symmetric (edges g).
 
 #[export]
-Hint Unfold is_proper NatSetMap.is_total
-  NatSetRel.in_dom Rel.is_symmetric : site_graphs.
+Hint Unfold is_proper NatMap.is_total
+  NatSRel.in_dom NatSRel.is_symmetric : site_graphs.
 
 (* We define the empty site graph that has
    no nodes, no sites, and no edges. *)
@@ -73,45 +62,34 @@ Definition empty :=
   {| nodes := NatSet.empty
   ;  sites := NatSet.empty
   ;  siteMap := NatMap.empty
-  ;  edges := Rel.empty
+  ;  edges := NatSRel.empty
   |}.
 
 (* And we prove that the empty site graph
-   satisfies the 3 properties above.
- *)
-Lemma empty_siteMap_is_total : NatSetMap.is_total empty.
-Proof. exact NatSetMap.empty_is_total. Qed.
-
-Lemma empty_edges_in_dom : NatSetRel.in_dom empty.
-Proof. cbn. exact NatSetRel.empty_in_dom. Qed.
-
-Lemma empty_edges_is_symmetric : Rel.is_symmetric (edges empty).
-Proof. cbn. exact Rel.empty_is_symmetric. Qed.
-
+   satisfies the 3 properties above. *)
 Corollary empty_is_proper : is_proper empty.
-Proof. splits.
-       - apply empty_siteMap_is_total.
-       - apply empty_edges_in_dom.
-       - apply empty_edges_is_symmetric.
+Proof.
+  splits.
+  - exact NatMap.empty_is_total.
+  - exact NatSRel.empty_in_dom.
+  - exact NatSRel.empty_is_symmetric.
 Qed.
 
-(* We have some functions to grow site graphs.
-   First, a function to add a node `u` to a site graph `g`.
- *)
+(* Next, we have some functions to grow site graphs.
+   First, a function to add a node `u` to a site graph `g`. *)
 Definition addNode u (g: SG) : SG :=
-  set nodes (fun us => NatSet.add u us) g.
+  set nodes (NatSet.add u) g.
 
 (* Second, a function to add a site `s` to a node `u`
    in a site graph `g`. *)
 Definition addSite s toNode g :=
   set siteMap (fun sm => s |-> toNode ; sm)
-    (set sites (fun ss => NatSet.add s ss) g).
+    (set sites (NatSet.add s) g).
 
 (* And third, a function to add an edge
    between sites `s1` and `s2` in site graph `g`. *)
 Definition addEdge s1 s2 g :=
-  set edges (fun es => if s1 =? s2 then (s1, s1) :: es
-                       else (s2, s1) :: (s1, s2) :: es) g.
+  set edges (NatSRel.add s1 s2) g.
 
 (* Now we prove that these operations
    preserve the 3 properties above. *)
