@@ -110,20 +110,41 @@ Module NatSRel.
 
 Definition t := Rel.t nat.
 Definition empty : t := Rel.empty.
+
 Definition is_symmetric (rel : t) : Prop :=
   forall x y, In (x, y) rel -> In (y, x) rel.
+
 Lemma empty_is_symmetric : is_symmetric empty.
 Proof. exact Rel.empty_is_symmetric. Qed.
+
+Definition add (x y : nat) (rel : t) : t :=
+  if x =? y then (x, y) :: rel
+  else (x, y) :: (y, x) :: rel.
+
+Lemma add_pres_symmetry : forall x y rel,
+    is_symmetric rel -> is_symmetric (add x y rel).
+Proof.
+Admitted.
+
+Definition flip {A B : Type} (xy : A * B) : B * A :=
+  match xy with | (x,y) => (y,x) end.
+
+Definition is_flipped (xy zw : nat * nat) : bool :=
+  match xy, zw with
+  | (x, y), (z, w) => andb (Nat.eqb x w) (Nat.eqb y z)
+  end.
+
+(* Definition is_symmetric_b (rel : t) : bool := *)
+(*   forallb (fun xy => existsb (eqb (flip xy)) rel) rel. *)
 
 Definition in_dom (rel : t) (dom : NatSet.t) : Prop :=
   forall x y, In (x, y) rel ->
               NatSet.In x dom /\ NatSet.In y dom.
 
+
 Lemma empty_in_dom : in_dom empty NatSet.empty.
 Proof. easy. Qed.
 
-Definition add (x y : nat) (rel : t) : t :=
-  if x =? y then (x, y) :: rel
-  else (x, y) :: (y, x) :: rel.
+(* Definition in_dom_b (rel : t) (dom : NatSet.t) : bool := *)
 
 End NatSRel.
