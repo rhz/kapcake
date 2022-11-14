@@ -32,23 +32,6 @@ Notation "x -- y" := (edges x y) (at level 30).
 Arguments edges : simpl never.
 (* Notation sgn := (sg [choiceType of nat] [choiceType of nat]). *)
 
-(* some attempts at understanding case analysis on fsets *)
-Goal forall (N S : choiceType) (G : sg N S), (nodes G).
-  (* move=> N S G. exact: (nodes G). *)
-  move=> N S.
-  case=> ns sm ss es es_sym.
-  (* case: ns. *)
-  case: (enum_fset ns) => [| n ns' ].
-  - (* exact: fset0. *) admit.
-  - exists n.
-Admitted.
-
-Goal forall (K V : choiceType) (VS : {fset V})
-            (f : {fmap K -> VS}) (x : domf f),
-    f x \in codomf f.
-  move=> K V VS f x. case: (f x).
-Admitted.
-
 Section SG_NS.
 Variables (N S : choiceType).
 
