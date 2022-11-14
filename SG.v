@@ -14,37 +14,9 @@ Reserved Notation "x -- y" (at level 30).
 Definition symmetric (T : finType) (R: rel T) :=
   [forall x, forall y, R x y == R y x].
 
-Lemma rel0_sym (R: rel void) : symmetric R.
-Proof. by apply/forallP. Qed.
-
-Definition relF (C : choiceType) (F : {fset C}) (_ _ : F) := false.
-Lemma relF_sym (C : choiceType) (F : {fset C}) : symmetric (@relF C F).
+Definition rel0 (C : choiceType) (F : {fset C}) (_ _ : F) := false.
+Lemma rel0_sym (C : choiceType) (F : {fset C}) : symmetric (@rel0 C F).
 Proof. apply/forallP => x. by apply/forallP. Qed.
-
-
-Module FinTypeBased.
-
-(* site graphs *)
-
-Record sg : Type :=
-  SG { nodes : finType (* seq_sub is also a potential instance *)
-     ; sites : finType
-     ; siteMap : {ffun sites -> nodes}
-     ; edges : rel sites
-     ; _ : symmetric edges
-    }.
-
-Definition empty : sg :=
-  @SG void_finType void_finType
-    (finfun (of_void void)) (of_void _) (rel0_sym _).
-
-Notation "x -- y" := (edges x y) (at level 30).
-Arguments edges : simpl never.
-
-End FinTypeBased.
-
-
-(* Module FinMapBased. *)
 
 (* site graphs *)
 
