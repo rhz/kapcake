@@ -31,11 +31,6 @@ Record sg (N S : choiceType) : Type :=
 Notation "x -- y" := (edges x y) (at level 30).
 Arguments edges : simpl never.
 (* Notation sgn := (sg [choiceType of nat] [choiceType of nat]). *)
-(* Definition empty : sg nat_choiceType nat_choiceType. *)
-(*   refine (@SG _ _ fset0 fmap0 _ _). *)
-(*   apply: relF_sym. *)
-(* Defined. *)
-(* Set Printing Implicit. Print empty. *)
 
 (* some attempts at understanding case analysis on fsets *)
 Goal forall (N S : choiceType) (G : sg N S), (nodes G).
