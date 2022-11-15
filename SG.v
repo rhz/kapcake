@@ -41,27 +41,14 @@ Definition empty : sg N S :=
 
 Variable (G : sg N S).
 
-Definition add_node (n : N) : sg N S.
-  case: G => ns sm ss es es_sym.
-  set ns' := (n |` ns). About fsetKUC.
-  have ns_sub_ns' : ns `<=` ns' by rewrite /fsubset fsetKUC.
-  set sm' : {fmap S -> ns'} :=
-    [fmap x: ss => fincl ns_sub_ns' (sm x)].
-  pose es' : rel (domf sm') := fun x y => es x y.
-  have es'_sym : symmetric es' by [].
-  exact: (@SG _ _ ns' sm' es' es'_sym).
-Defined.
-
-About fincl. About fsubsetUr.
-Definition add_node' (n : N) : sg N S :=
+Definition add_node (n : N) : sg N S :=
   @SG N S (n |` nodes G)
     (FinMap (finfun (fincl (fsubsetUr [fset n] (nodes G))
                        \o siteMap G)))
     (@edges N S G) (@edges_sym N S G).
 
 
+
 End SG_NS.
-
-
 
 End SiteGraphs.
