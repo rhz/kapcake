@@ -29,6 +29,20 @@ Proof. done. Qed.
 Lemma rel0_symb (T : finType) : symb (@rel0 T).
 Proof. by apply/'forall_forallP. Qed.
 
+(* attempt at finding missing coercion *)
+Definition g (T : finType) := tt.
+Variable (C : choiceType) (f : {fset C}).
+Print Graph.
+(* Check @rel0_symb f. *)
+Set Printing Coercions.
+Set Printing Implicit.
+Check symb (@rel0 f).
+Check g [finType of f].
+Check g (@fset_sub_finType C f).
+About fset_sub_finType.
+Coercion fset_sub_finType : finSet >-> finType.
+Check g f.
+
 (* site graphs *)
 Record sg (N S : choiceType) : Type :=
   SG { nodes : {fset N}
