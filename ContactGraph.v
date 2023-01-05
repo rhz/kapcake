@@ -42,66 +42,18 @@ Notation "p1 =sym= p2" := (eq_sym p1 p2)
 Section FinMap.
 Variables (K V : choiceType).
 
-(* Lemma codomf_cat (f g : {fmap K -> V}) : *)
-(*   codomf (f + g) = codomf g `|` codomf f.[\domf g]. *)
-(* Proof. *)
-(* apply/fsetP=> v'; rewrite ![RHS]inE. *)
-(* apply/codomfP/orP => [[x /fndSomeP[xI]]|[]]. *)
-(* - have [xIg|xNIg] := (boolP (x \in domf g)). *)
-(*     by rewrite getf_catr // => <-; left; rewrite in_codomf. *)
-(*   rewrite getf_catl // => [|x1 <-]. *)
-(*     by rewrite !inE (negPf xNIg) orbF in xI. *)
-(*   right. *)
-(*   apply/codomfP; exists x. *)
-(*   rewrite fnd_rem (negPf xNIg). *)
-(*   by apply/fndSomeP; exists x1. *)
-(* - move=> /codomfP[x /fndSomeP[xI xM]]. *)
-(*   exists x. *)
-(*   rewrite fnd_cat xI. *)
-(*   by apply/fndSomeP; exists xI. *)
-(* move=> /codomfP[x]. *)
-(* rewrite fnd_rem. *)
-(* case: (boolP (_ \in _)) => // xNIg /fndSomeP[xIm <-]. *)
-(* exists x; apply/fndSomeP. *)
-(* have xH : x \in domf (f + g) by rewrite inE xIm. *)
-(* by exists xH; rewrite getf_catl. *)
-(* Qed. *)
-
 Lemma codomf_cat (f g : {fmap K -> V}) :
   codomf (f + g) = codomf g `|` codomf f.[\domf g].
 Proof using Type.
-  apply/fsetP=> v. rewrite ![RHS]inE.
-  apply/codomfP/orP => [[x /fndSomeP[xI]] | []].
-  - have [xIg|xNIg] := (boolP (x \in domf g)).
-    + About getf_catr. rewrite getf_catr => <-. left.
-      About in_codomf. apply: in_codomf.
-    + About getf_catl. rewrite getf_catl // => [|x1 <-].
-      * Check (negPf xNIg). by rewrite !inE (negPf xNIg) orbF in xI.
-      * right. apply/codomfP. exists x.
-        About fnd_rem. rewrite fnd_rem (negPf xNIg).
-        apply/fndSomeP. by exists x1.
-  - move=> /codomfP[x /fndSomeP[xI xM]].
-    exists x. About fnd_cat. rewrite fnd_cat xI.
-    apply/fndSomeP. exists xI. exact: xM.
-  - move=> /codomfP[x]. rewrite fnd_rem.
-    case: (boolP (x \in domf g)) => // xNIg /fndSomeP[xIm <-].
-    exists x. apply/fndSomeP.
-    have xH : x \in domf (f + g) by rewrite inE xIm.
-    exists xH. by rewrite getf_catl.
+  apply/fsetP => v. rewrite ![RHS]inE.
+  apply/codomfP/(orPP (codomfP _ _) (codomfP _ _)); last first.
+  - move=> [] [x xI]; exists x; rewrite fnd_cat.
+    + by case: fndP xI.
+    + move: xI. rewrite fnd_rem. by case: ifP.
+  - move=> [] x. rewrite fnd_cat. case: fndP => // [xg gx|xNg fx].
+    + left. exists x. by rewrite in_fnd.
+    + right. exists x. by rewrite fnd_rem ifN.
 Qed.
-
-(* add many keys pointing to the same value *)
-(* Fixpoint setks (m : {fmap K -> V}) (ks : seq K) (v : V) := *)
-(*   if ks is k :: ks' then setks m.[k <- v] ks' v else m. *)
-
-(* Definition setks (m : {fmap K -> V}) (ks : {fset K}) (v : V) := *)
-(*   [fmap k : ks `|` domf m => *)
-(*      if val k \in ks then v *)
-(*      else odflt v (fnd m (val k))]. *)
-
-(* Lemma setksD (m : {fmap K -> V}) (ks : {fset K}) (v : V) : *)
-(*   domf (setks m ks v) = ks `|` domf m. *)
-(* Proof using Type. done. Qed. *)
 
 Definition setks (m : {fmap K -> V}) (ks : {fset K}) (v : V) :=
   m + [fmap _ : ks => v].
@@ -121,65 +73,12 @@ Proof using Type.
     rewrite H in xNEv. by apply: (@neqxx _ x).
 Qed.
 
-(* Lemma setksC (m : {fmap K -> V}) (ks : {fset K}) (v : V) : *)
-(*   ks != fset0 -> *)
-(*   codomf (setks m ks v) = v |` codomf m.[\ ks]. *)
-(* Proof using Type. *)
-(* move=> /fset0Pn [k k_in_ks]; rewrite /setks. *)
-(* apply/fsetP=> v'; rewrite ![RHS]inE. *)
-(* apply/codomfP/orP => [[x /fndSomeP[xI]]|[]]. *)
-(* - have [xIks|xNIks] := (boolP (x \in ks)). *)
-(*     by rewrite getf_catr // ffunE => ->; left; rewrite inE. *)
-(*   rewrite getf_catl // => [|x1 <-]. *)
-(*     by rewrite !inE (negPf xNIks) orbF in xI. *)
-(*   right. *)
-(*   apply/codomfP; exists x. *)
-(*   rewrite fnd_rem (negPf xNIks). *)
-(*   by apply/fndSomeP; exists x1. *)
-(* - rewrite inE => /eqP->. *)
-(*   exists k. *)
-(*   rewrite fnd_cat k_in_ks. *)
-(*   by apply/fndSomeP; exists k_in_ks; rewrite ffunE. *)
-(* move=> /codomfP[x]. *)
-(* rewrite fnd_rem. *)
-(* case: (boolP (_ \in _)) => // xNIks /fndSomeP[xIm <-]. *)
-(* exists x; apply/fndSomeP. *)
-(* have xH : x \in domf (m + [fmap _ : ks => v]) by rewrite inE xIm. *)
-(* by exists xH; rewrite getf_catl. *)
-(* Qed. *)
-
 Lemma setksC (m : {fmap K -> V}) (ks : {fset K}) (v : V) :
   ks != fset0 ->
   codomf (setks m ks v) = v |` codomf m.[\ ks].
 Proof using Type.
-  move=> H. by rewrite codomf_cat codomf_const /=.
+  move=> H. by rewrite codomf_cat codomf_const.
 Qed.
-
-(* Proof using Type. *)
-(*   move=> /fset0Pn [k k_in_ks]. *)
-(*   apply/fsetP=> v'. rewrite !inE. *)
-(*   case H: [exists x, setks m ks v x == v']. *)
-(*   move: H => /existsP [k' H']. *)
-(* Admitted. *)
-(**
-  case H: [exists x, m.[\ ks] x == v'].
-  (* Search [exists ?x, _ x ]. *)
-  move: H => /existsP [k' H'].
-  suff -> : [exists x, setks m ks v x == v'].
-    by rewrite [_ || true]orbC.
-  apply/existsP.
-  exists k'.
-
-  have [-> | neq_v'v] /= := altP eqP.
-  (* v' == v *) apply/existsP.
-  have ks_sub : ks `<=` (ks `|` domf m) by rewrite fsubsetUl.
-  exists (fincl ks_sub [` k_in_ks]).
-  (* set x := fsval (fincl ks_sub [` k_in_ks]) \in ks. *)
-  (* cbv in x. *)
-  by rewrite ffunE /= k_in_ks.
-  (* neq_v'v : v' != v *) apply/existsP.
-Admitted.
- *)
 
 Definition getks (m : {fmap K -> V}) (v : V) : {fset K} :=
   [fset k | k in m & m.[? k] == Some v].
