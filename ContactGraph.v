@@ -86,8 +86,8 @@ Proof using Type.
   move=> H. by rewrite codomf_cat codomf_const.
 Qed.
 
-Definition getks (m : {fmap K -> V}) (v : V) : {fset K} :=
-  [fset k | k in m & m.[? k] == Some v].
+Definition getks (m : {fmap K -> V}) (v : V) : {fset (domf m)} :=
+  [fset k | k : domf m & m k == v].
 
 End FinMap.
 
@@ -108,7 +108,7 @@ Section CG.
 Variable (g : cg).
 Definition nodes : {fset N} := codomf (siteMap g).
 Definition sites : {fset S} := domf (siteMap g).
-Definition sites_of (n : N) : {fset S} := getks (siteMap g) n.
+Definition sites_of (n : N) : {fset sites} := getks (siteMap g) n.
 
 Definition add_site (s : S) (to_n : N) : cg :=
   @CG (siteMap g).[s <- to_n] (edges g) (edges_sym g).
@@ -133,7 +133,7 @@ Definition remove_sites (ss : {fset S}) : cg :=
   @CG (siteMap g).[\ ss] (edges g) (edges_sym g).
 
 Definition remove_node (n : N) : cg :=
-  remove_sites (sites_of n).
+  remove_sites [fset val s | s in sites_of n].
 
 Definition remove_edge (s t : S) : cg.
   pose es x y := if (x, y) =sym= (s, t) then false else @edges g x y.
@@ -167,85 +167,35 @@ Lemma add_nodeS (n : N) (ss : {fset S}) :
   sites (add_node g n ss) = sites g `|` ss.
 Proof using Type. by rewrite /sites /= fsetUDr fsetDv fsetD0. Qed.
 
-Lemma notin_sites (n1 n2 : N) (s : sites g) :
-  (siteMap g s == n1) && (n1 != n2) ->
-  fsval s \notin sites_of g n2.
-Proof using Type.
-Admitted.
-
-Lemma notin_sites' (n : N) (s : sites g) :
-  fsval s \notin sites_of g n -> siteMap g s != n.
-Proof using Type.
-Admitted.
+Lemma in_sites_of (n : N) (s : sites g) :
+  s \in sites_of g n <-> siteMap g s == n.
+Proof using Type. by split; rewrite !inE. Qed.
 
 Lemma remove_nodeN (n : N) :
   nodes (remove_node g n) = nodes g `\ n.
 Proof using Type.
   rewrite /remove_node /nodes.
-  (* rewrite codomf_rem_exists. *)
-  rewrite codomf_rem. Locate "\notin".
-  Search "fset" "eq_". About Imfset.imfset.
+  rewrite codomf_rem.
   apply/fsetP => x. apply/imfsetP.
-  case: ifP => /=. Locate "exists2".
+  case: ifP => /=.
   (* use x to get the a site of x: *)
   (* if x is in codomf (siteMap g) then there must be a site *)
   (* mapping to it in domf (siteMap g). *)
-  Search (_ \in _ `\ _).
-  Search (_ \in codomf _). Search "fset" (_ \in _).
-  (* rewrite in_fsetD1 => /andP[xNEn xIc]. *)
-  (* rewrite in_fsetD1 => /andP[xNEn /codomfP[s Hs]]. *)
   rewrite in_fsetD1 mem_codomf => /andP[xNEn /existsP[s Hs]].
-  exists s. Locate "pred". About SimplPred. rewrite inE.
-  apply (@notin_sites x n s).
-  - by rewrite xNEn Hs.
-  - by rewrite (eqP Hs).
+  exists s; last first.
+    by rewrite (eqP Hs).
+  rewrite !inE. apply/negP. rewrite (eqP Hs).
+  by apply/negP: xNEn.
+  (* second part *)
+  (* x \notin codomf (siteMap g) `\ n -> ~ (exists2 y ...) *)
+  rewrite !inE /=.
   move=> /negbT xNIcod [s sNSOn] sSOx.
+  rewrite !inE /= in sNSOn.
   (* the proof proceeds by showing that x == n *)
-  rewrite inE in sNSOn.
-  Search (_ ?x = _) codomf. About mem_codomf.
-  have xIcod: x \in codomf (siteMap g).
-  { rewrite mem_codomf. apply/existsP.
-    exists s. by rewrite sSOx. }
-  rewrite !inE in xNIcod.
   apply/negP: xNIcod. rewrite negbK. apply/andP. split; last first.
   apply/existsP. exists s. by rewrite sSOx.
-  (* by sNSOn, siteMap g s != n *)
-  (* have H (n1 : N) (s1 : sites g) : *)
-  (*   reflect (fsval s1 \in sites_of g n1) (siteMap g s1 == n1). *)
-  (* have H (n1 : N) (s1 : sites g) : *)
-  (*   fsval s1 \in sites_of g n1 <-> siteMap g s1 == n1. *)
-  rewrite sSOx.
-  apply: notin_sites'. by apply: sNSOn.
+  rewrite sSOx. apply: sNSOn.
 Qed.
-  (* suff sID: forall s : S, *)
-  (*     s \in sites_of g n -> s \in domf (siteMap g). *)
-  (* suff H: forall s : S, forall h : s \in sites_of g n, *)
-  (*     siteMap g [` sID s h] = n. *)
-  (* suff H1: forall v : N, *)
-  (*     [exists k, (val k \notin sites_of g n) && *)
-  (*                  (siteMap g k == v)] = *)
-  (*       (v != n). *)
-
-Lemma imfset_id' (X : {fset N}) : [fset x | x in X] = X.
-Proof using Type. by rewrite imfset_id. Qed.
-
-Search "fset" reflect.
-
-Lemma b (X : {fset N}) (n : N) :
-  [fset x | x in X & x != n] = X `\ n.
-Proof using Type.
-  apply/fsetP => x'. symmetry. About fsetD1P. apply/fsetD1P.
-Admitted.
-
-Lemma sites_ofDM (s : S) (n : N) :
-  s \in sites_of g n -> s \in domf (siteMap g).
-Proof using Type.
-Admitted.
-
-Lemma sites_ofM (s : S) (n : N) (H : s \in sites_of g n) :
-  siteMap g [` sites_ofDM H] = n.
-Proof using Type.
-Admitted.
 
 Lemma remove_nodeS (n : N) :
   sites (remove_node g n) = sites g `\` sites_of g n.
