@@ -167,10 +167,6 @@ Lemma add_nodeS (n : N) (ss : {fset S}) :
   sites (add_node g n ss) = sites g `|` ss.
 Proof using Type. by rewrite /sites /= fsetUDr fsetDv fsetD0. Qed.
 
-Lemma in_sites_of (n : N) (s : sites g) :
-  s \in sites_of g n <-> siteMap g s == n.
-Proof using Type. by split; rewrite !inE. Qed.
-
 Lemma remove_nodeN (n : N) :
   nodes (remove_node g n) = nodes g `\ n.
 Proof using Type.
@@ -187,21 +183,24 @@ Proof using Type.
   rewrite !inE. apply/negP. rewrite (eqP Hs).
   by apply/negP: xNEn.
   (* second part *)
-  (* x \notin codomf (siteMap g) `\ n -> ~ (exists2 y ...) *)
+  (* x \notin codomf (siteMap g) `\ n -> *)
+  (* there's no site y of x that's a site of n. *)
   rewrite !inE /=.
   move=> /negbT xNIcod [s sNSOn] sSOx.
   rewrite !inE /= in sNSOn.
-  (* the proof proceeds by showing that x == n *)
   apply/negP: xNIcod. rewrite negbK. apply/andP. split; last first.
   apply/existsP. exists s. by rewrite sSOx.
   rewrite sSOx. apply: sNSOn.
 Qed.
 
 Lemma remove_nodeS (n : N) :
-  sites (remove_node g n) = sites g `\` sites_of g n.
+  sites (remove_node g n) =
+    sites g `\` [fset val s | s in sites_of g n].
 Proof using Type.
-Admitted.
-
+  apply/fsetP => s. rewrite !inE.
+  case: (s \in sites g) => // /=.
+  by rewrite andbF.
+Qed.
 
 End CG_NS.
 End Lemmata.
