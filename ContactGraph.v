@@ -15,6 +15,7 @@ Proof. move=> /eqP xNEx. by apply: xNEx. Qed.
 Coercion fset_sub_finType : finSet >-> finType.
 Local Open Scope fset.
 Local Open Scope fmap.
+Arguments val : simpl never.
 
 (* symmetric relations *)
 Definition symb (T : finType) (R : rel T) :=
@@ -42,8 +43,6 @@ Notation "p1 =sym= p2" := (eq_sym p1 p2)
 (* Extra lemmas for finite maps.
  * One of them will be soon integrated into mathcomp.finmap: codomf_cat.
  * codomf_const: codomf of constant map.
- * setksD: setks and domf.
- * setksC: setks and codomf.
  *)
 Section FinMap.
 Variables (K V : choiceType).
@@ -61,13 +60,6 @@ Proof using Type.
     + right. exists x. by rewrite fnd_rem ifN.
 Qed.
 
-Definition setks (m : {fmap K -> V}) (ks : {fset K}) (v : V) :=
-  m + [fmap _ : ks => v].
-
-Lemma setksD (m : {fmap K -> V}) (ks : {fset K}) (v : V) :
-  domf (setks m ks v) = ks `|` domf m.
-Proof using Type. by rewrite domf_cat fsetUC. Qed.
-
 Lemma codomf_const (ks : {fset K}) (v : V) :
   ks != fset0 -> codomf [fmap _ : ks => v] = [fset v].
 Proof using Type.
@@ -79,15 +71,26 @@ Proof using Type.
     rewrite H in xNEv. by apply: (@neqxx _ x).
 Qed.
 
-Lemma setksC (m : {fmap K -> V}) (ks : {fset K}) (v : V) :
-  ks != fset0 ->
-  codomf (setks m ks v) = v |` codomf m.[\ ks].
-Proof using Type.
-  move=> H. by rewrite codomf_cat codomf_const.
-Qed.
+(* Definition setks (m : {fmap K -> V}) (ks : {fset K}) (v : V) := *)
+(*   m + [fmap _ : ks => v]. *)
 
-Definition getks (m : {fmap K -> V}) (v : V) : {fset (domf m)} :=
-  [fset k | k : domf m & m k == v].
+(* Lemma setksD (m : {fmap K -> V}) (ks : {fset K}) (v : V) : *)
+(*   domf (setks m ks v) = ks `|` domf m. *)
+(* Proof using Type. by rewrite domf_cat fsetUC. Qed. *)
+
+(* Lemma setksC (m : {fmap K -> V}) (ks : {fset K}) (v : V) : *)
+(*   ks != fset0 -> *)
+(*   codomf (setks m ks v) = v |` codomf m.[\ ks]. *)
+(* Proof using Type. *)
+(*   move=> H. by rewrite codomf_cat codomf_const. *)
+(* Qed. *)
+
+Lemma fsetD_negb (C : choiceType) (X : {fset C}) (P : C -> bool) :
+  [fset x in X | ~~(P x)] = X `\` [fset x in X | P x].
+Proof using Type. Admitted.
+
+Definition preimage_of (m : {fmap K -> V}) (v : V)
+  : {fset (domf m)} := [fset k | k : domf m & m k == v].
 
 End FinMap.
 
@@ -108,16 +111,16 @@ Section CG.
 Variable (g : cg).
 Definition nodes : {fset N} := codomf (siteMap g).
 Definition sites : {fset S} := domf (siteMap g).
-Definition sites_of (n : N) : {fset sites} := getks (siteMap g) n.
+Definition sites_of (n : N) : {fset sites} := preimage_of (siteMap g) n.
 
-Definition add_sites (n : N) (ss : {fset S}) : cg :=
-  @CG (setks (siteMap g) ss n) (edges g) (edges_sym g).
+Definition add_sites (m : {fmap S -> N}) : cg :=
+  @CG (siteMap g + m) (edges g) (edges_sym g).
 
 Definition add_site (n : N) (s : S) : cg :=
-  add_sites n [fset s].
+  add_sites [fmap].[s <- n].
 
 Definition add_node (n : N) (ss : {fset S}) : cg :=
-  add_sites n ss.
+  add_sites [fmap _ : ss => n].
 
 Definition remove_sites (ss : {fset S}) : cg :=
   @CG (siteMap g).[\ ss] (edges g) (edges_sym g).
@@ -154,61 +157,47 @@ End NS.
 (* Lemmas for contact graphs.
  * add_nodeN: add_node and nodes.
  * add_nodeS: add_node and sites.
+ * add_nodeE: add_node and edges.
  * remove_nodeN: add_node and nodes.
  * remove_nodeS: add_node and sites.
+ * remove_nodeE: add_node and edges.
  *)
 Module Lemmata.
 Section CG_NS.
 Variables (N S : choiceType) (g : cg N S).
 
-Lemma add_sitesN (n : N) (ss : {fset S}) :
+Lemma add_nodeN (n : N) (ss : {fset S}) :
   ss != fset0 ->
-  nodes (add_sites g n ss) = n |` nodes (remove_sites g ss).
-Proof using Type. apply: setksC. Qed.
+  nodes (add_node g n ss) = n |` nodes (remove_sites g ss).
+Proof using Type.
+  move=> H. by rewrite /nodes codomf_cat codomf_const.
+Qed.
 
-Lemma add_sitesS (n : N) (ss : {fset S}) :
-  sites (add_sites g n ss) = sites g `|` ss.
+Lemma add_nodeN0 (n : N) (ss : {fset S}) :
+  ss == fset0 ->
+  nodes (add_node g n ss) = nodes (remove_sites g ss).
+Proof using Type. Admitted.
+
+Lemma add_nodeS (n : N) (ss : {fset S}) :
+  sites (add_node g n ss) = sites g `|` ss.
 Proof using Type. by rewrite /sites /= fsetUDr fsetDv fsetD0. Qed.
 
-(* Lemma fset_negb_exists (C D : choiceType) *)
-(*   (X : {fset C}) (Y : {fset D}) (P : C -> D -> bool) : *)
-(*   [fset x in X | ~~[exists y : Y, P x (val y)]] = *)
-(*     [fset x in X | [forall y : Y, ~~(P x (val y))]]. *)
-(* Proof using Type. Admitted. *)
+Lemma add_sitesN (m : {fmap S -> N}) :
+  nodes (add_sites g m) =
+    codomf m `|` nodes (remove_sites g (domf m)).
+Proof using Type. Admitted.
 
-(* Lemma fsetD_negb (C : choiceType) (X : {fset C}) (P : C -> bool) : *)
-(*   [fset x in X | ~~(P x)] = X `\` [fset x in X | P x]. *)
-(* Proof using Type. Admitted. *)
-
-(* Lemma fset_binary_exists (C D : choiceType) *)
-(*   (X : {fset C}) (Y : {fset D}) (P : C -> D -> bool) : *)
-(*   [fset x | x in X, y in Y & P x y] = *)
-(*     [fset x in X | [forall y : Y, P x (val y)]]. *)
-(* Proof using Type. Admitted. *)
-
-(* Lemma in_codomf_rem (K V : choiceType) (m : {fmap K -> V}) *)
-(*   (ks : {fset K}) (v : V) : *)
-(*   v \in codomf m.[\ ks] -> v \in codomf m. *)
-(* Proof. Admitted. *)
-
-Arguments val : simpl never.
+Lemma add_sitesS (m : {fmap S -> N}) :
+  sites (add_sites g m) = sites g `|` domf m.
+Proof using Type. by rewrite /sites /= fsetUDr fsetDv fsetD0. Qed.
 
 Lemma remove_sitesN (ss : {fset S}) :
   nodes (remove_sites g ss) =
     nodes g `\` [fset n in nodes g | val @` sites_of g n `<=` ss].
 Proof using Type.
-  (* rewrite /remove_sites /nodes /=. *)
-  (* rewrite /restrictf. *)
-  (* suff codomf_filterf (K V : choiceType) (m : {fmap K -> V}) *)
-  (*   (P : pred K) : *)
-  (*   codomf (filterf m P) = [fset m k | k : domf m & P (val k)]. *)
-  (* rewrite codomf_filterf. *)
-
   rewrite /remove_sites /nodes /=.
   rewrite codomf_rem.
-  have ->: nodes g `\`
-    [fset n in nodes g | val @` sites_of g n `<=` ss] =
-    [fset n in nodes g | ~~(val @` sites_of g n `<=` ss)] by admit.
+  rewrite -(fsetD_negb _ (fun n => val @` sites_of g n `<=` ss)).
   have in_codomf_cond (m : {fmap S -> N}) (P : pred S) (n' : N) :
     n' \in [fset m s | s : domf m & P (val s)] <->
     exists s : domf m, m s == n' /\ P (val s) by admit.
@@ -237,59 +226,6 @@ Proof using Type.
   rewrite (in_codomf_cond (siteMap g) (fun s => s \notin ss)).
   move=> {in_codomf_cond}. move: (iffRL (b n t) H4) => H6.
   by exists t.
-Admitted.
-
-(*   rewrite /remove_sites /nodes /=. *)
-(*   rewrite codomf_rem. *)
-(*   apply/fsetP => n. *)
-(*   apply/imfsetP. *)
-(*   case: ifP => /=. *)
-(*   Search "fset" "D". *)
-(*   (* move=> /fsetDP[H1 H2]. *) *)
-(*   rewrite in_fsetD mem_codomf. *)
-(*   rewrite !inE. rewrite negb_and. *)
-(*   move=> /andP[/orP[H|H] /existsP[s Hs]]. *)
-(*   exfalso. apply: (negP H). apply/existsP. by exists s. *)
-(*   exists s; last first. by rewrite (eqP Hs). *)
-(*   rewrite inE. apply/negP=> sIss. apply: (negP H). *)
-(*   rewrite /sites_of /getks {H}. Search "fset" (_ `<=` _). *)
-(*   Locate "`<=`". Print fsubset. Search "fset" "I". *)
-(*   suff in_sub (C : choiceType) (A B : {fset C}) : *)
-(*     reflect (forall x, (x \in A) -> (x \in B)) (A `<=` B). *)
-(*   apply/in_sub => t H1 {in_sub}. *)
-
-(*   apply/fsetIidPl. *)
-(*   apply/fsetP => t. *)
-(*   apply/fsetIP/idP. *)
-(*   move=> [H1 H2]. exact: H1. *)
-(*   move=> H1. split. exact: H1. *)
-(* Admitted. *)
-
-Lemma remove_sitesN (ss : {fset S}) :
-  ss != fset0 ->
-  nodes (remove_sites g ss) =
-    [fset n in nodes g |
-      [forall s : ss, (siteMap g).[? val s] != Some n]].
-(*  ~~[exists s : ss, (siteMap g).[? val s] == Some n]]. *)
-Proof using Type.
-  move=> /fset0Pn[s sIss].
-  (* pose f x y := (siteMap g).[? y] == Some x. *)
-  (* rewrite (fset_negb_exists (nodes g) ss f). *)
-  (* rewrite fsetD_negb. *)
-  (* rewrite fset_binary_exists. *)
-  (* pose f x y := (siteMap g).[? y] == Some x. *)
-  (* rewrite -(fset_negb_exists (nodes g) ss f). *)
-  rewrite /remove_sites /nodes /=. symmetry.
-  apply/fsetP => n. apply/imfsetP.
-  case: ifP => /=.
-  move/[dup]/in_codomf_rem/[swap] => nIc.
-  rewrite mem_codomf => /existsP[t Ht].
-  exists n => //. rewrite !inE. (* sIss. *)
-  apply/andP. split.
-  apply/existsP. by exists t.
-  apply/forallP => u.
-  move: nIc. rewrite mem_codomf => /existsP[v Hv].
-  rewrite codomf_rem_exists in nIc.
 Admitted.
 
 Lemma remove_nodeN (n : N) :
@@ -324,6 +260,7 @@ Lemma remove_nodeS (n : N) :
 Proof using Type.
   apply/fsetP => s.
   by rewrite !inE /= unfold_in topredE andbCA andbb.
+  (* alternative proof *)
   (* apply/fsetP => s. rewrite !inE. *)
   (* case: (s \in sites g) => // /=. *)
   (* by rewrite andbF. *)
