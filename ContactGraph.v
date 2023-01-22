@@ -110,11 +110,23 @@ Definition nodes : {fset N} := codomf (siteMap g).
 Definition sites : {fset S} := domf (siteMap g).
 Definition sites_of (n : N) : {fset sites} := getks (siteMap g) n.
 
-Definition add_site (s : S) (to_n : N) : cg :=
-  @CG (siteMap g).[s <- to_n] (edges g) (edges_sym g).
+Definition add_sites (n : N) (ss : {fset S}) : cg :=
+  @CG (setks (siteMap g) ss n) (edges g) (edges_sym g).
 
-Definition add_node (n : N) (sites : {fset S}) : cg :=
-  @CG (setks (siteMap g) sites n) (edges g) (edges_sym g).
+Definition add_site (n : N) (s : S) : cg :=
+  add_sites n [fset s].
+
+Definition add_node (n : N) (ss : {fset S}) : cg :=
+  add_sites n ss.
+
+Definition remove_sites (ss : {fset S}) : cg :=
+  @CG (siteMap g).[\ ss] (edges g) (edges_sym g).
+
+Definition remove_site (s : S) : cg :=
+  remove_sites [fset s].
+
+Definition remove_node (n : N) : cg :=
+  remove_sites [fsetval s in sites_of n].
 
 Definition add_edge (s t : S) : cg.
   pose es x y := ((x, y) =sym= (s, t)) || (@edges g x y).
@@ -125,15 +137,6 @@ Definition add_edge (s t : S) : cg.
   case: ((y == s) && (x == t)) => //.
   rewrite !orFb. by apply: (@edges_sym g).
 Qed.
-
-Definition remove_site (s : S) : cg :=
-  @CG (siteMap g).[~ s] (edges g) (edges_sym g).
-
-Definition remove_sites (ss : {fset S}) : cg :=
-  @CG (siteMap g).[\ ss] (edges g) (edges_sym g).
-
-Definition remove_node (n : N) : cg :=
-  remove_sites [fset val s | s in sites_of n].
 
 Definition remove_edge (s t : S) : cg.
   pose es x y := if (x, y) =sym= (s, t) then false else @edges g x y.
@@ -158,14 +161,136 @@ Module Lemmata.
 Section CG_NS.
 Variables (N S : choiceType) (g : cg N S).
 
-Lemma add_nodeN (n : N) (ss : {fset S}) :
+Lemma add_sitesN (n : N) (ss : {fset S}) :
   ss != fset0 ->
-  nodes (add_node g n ss) = n |` nodes (remove_sites g ss).
+  nodes (add_sites g n ss) = n |` nodes (remove_sites g ss).
 Proof using Type. apply: setksC. Qed.
 
-Lemma add_nodeS (n : N) (ss : {fset S}) :
-  sites (add_node g n ss) = sites g `|` ss.
+Lemma add_sitesS (n : N) (ss : {fset S}) :
+  sites (add_sites g n ss) = sites g `|` ss.
 Proof using Type. by rewrite /sites /= fsetUDr fsetDv fsetD0. Qed.
+
+(* Lemma fset_negb_exists (C D : choiceType) *)
+(*   (X : {fset C}) (Y : {fset D}) (P : C -> D -> bool) : *)
+(*   [fset x in X | ~~[exists y : Y, P x (val y)]] = *)
+(*     [fset x in X | [forall y : Y, ~~(P x (val y))]]. *)
+(* Proof using Type. Admitted. *)
+
+(* Lemma fsetD_negb (C : choiceType) (X : {fset C}) (P : C -> bool) : *)
+(*   [fset x in X | ~~(P x)] = X `\` [fset x in X | P x]. *)
+(* Proof using Type. Admitted. *)
+
+(* Lemma fset_binary_exists (C D : choiceType) *)
+(*   (X : {fset C}) (Y : {fset D}) (P : C -> D -> bool) : *)
+(*   [fset x | x in X, y in Y & P x y] = *)
+(*     [fset x in X | [forall y : Y, P x (val y)]]. *)
+(* Proof using Type. Admitted. *)
+
+(* Lemma in_codomf_rem (K V : choiceType) (m : {fmap K -> V}) *)
+(*   (ks : {fset K}) (v : V) : *)
+(*   v \in codomf m.[\ ks] -> v \in codomf m. *)
+(* Proof. Admitted. *)
+
+Arguments val : simpl never.
+
+Lemma remove_sitesN (ss : {fset S}) :
+  nodes (remove_sites g ss) =
+    nodes g `\` [fset n in nodes g | val @` sites_of g n `<=` ss].
+Proof using Type.
+  (* rewrite /remove_sites /nodes /=. *)
+  (* rewrite /restrictf. *)
+  (* suff codomf_filterf (K V : choiceType) (m : {fmap K -> V}) *)
+  (*   (P : pred K) : *)
+  (*   codomf (filterf m P) = [fset m k | k : domf m & P (val k)]. *)
+  (* rewrite codomf_filterf. *)
+
+  rewrite /remove_sites /nodes /=.
+  rewrite codomf_rem.
+  have ->: nodes g `\`
+    [fset n in nodes g | val @` sites_of g n `<=` ss] =
+    [fset n in nodes g | ~~(val @` sites_of g n `<=` ss)] by admit.
+  have in_codomf_cond (m : {fmap S -> N}) (P : pred S) (n' : N) :
+    n' \in [fset m s | s : domf m & P (val s)] <->
+    exists s : domf m, m s == n' /\ P (val s) by admit.
+  have b (n' : N) : forall s : sites g,
+      siteMap g s == n' <-> s \in sites_of g n' by admit.
+  symmetry. apply/fsetP => n. apply/imfsetP. case: ifP.
+  move/(in_codomf_cond (siteMap g) (fun s => s \notin ss))
+      => [s [H1 H2]]. (* {in_codomf_cond}. *)
+  exists n => //. rewrite !inE. apply/andP. split.
+  apply/existsP. by exists s.
+  apply/negP.
+  have a : val @` sites_of g n `<=` ss ->
+           (forall s : sites g,
+               s \in sites_of g n -> val s \in ss) by admit.
+  move/a => H.
+  move: (H s (iffLR (b n s) H1)). exact/negP.
+  (* second part *)
+  move=> /negbT H /= [n' H1 H2].
+  (* move: H1. rewrite !inE -H2 => /andP[/existsP[s sSOn'] H3]. *)
+  move: H1. rewrite !inE -H2 => /andP[_ H3].
+  apply/negP: H. rewrite negbK.
+  have c : ~~ (val @` sites_of g n `<=` ss) ->
+           (exists s : sites g,
+               s \in sites_of g n /\ val s \notin ss) by admit.
+  move: H3. move/c => [t [H4 H5]] {c}.
+  rewrite (in_codomf_cond (siteMap g) (fun s => s \notin ss)).
+  move=> {in_codomf_cond}. move: (iffRL (b n t) H4) => H6.
+  by exists t.
+Admitted.
+
+(*   rewrite /remove_sites /nodes /=. *)
+(*   rewrite codomf_rem. *)
+(*   apply/fsetP => n. *)
+(*   apply/imfsetP. *)
+(*   case: ifP => /=. *)
+(*   Search "fset" "D". *)
+(*   (* move=> /fsetDP[H1 H2]. *) *)
+(*   rewrite in_fsetD mem_codomf. *)
+(*   rewrite !inE. rewrite negb_and. *)
+(*   move=> /andP[/orP[H|H] /existsP[s Hs]]. *)
+(*   exfalso. apply: (negP H). apply/existsP. by exists s. *)
+(*   exists s; last first. by rewrite (eqP Hs). *)
+(*   rewrite inE. apply/negP=> sIss. apply: (negP H). *)
+(*   rewrite /sites_of /getks {H}. Search "fset" (_ `<=` _). *)
+(*   Locate "`<=`". Print fsubset. Search "fset" "I". *)
+(*   suff in_sub (C : choiceType) (A B : {fset C}) : *)
+(*     reflect (forall x, (x \in A) -> (x \in B)) (A `<=` B). *)
+(*   apply/in_sub => t H1 {in_sub}. *)
+
+(*   apply/fsetIidPl. *)
+(*   apply/fsetP => t. *)
+(*   apply/fsetIP/idP. *)
+(*   move=> [H1 H2]. exact: H1. *)
+(*   move=> H1. split. exact: H1. *)
+(* Admitted. *)
+
+Lemma remove_sitesN (ss : {fset S}) :
+  ss != fset0 ->
+  nodes (remove_sites g ss) =
+    [fset n in nodes g |
+      [forall s : ss, (siteMap g).[? val s] != Some n]].
+(*  ~~[exists s : ss, (siteMap g).[? val s] == Some n]]. *)
+Proof using Type.
+  move=> /fset0Pn[s sIss].
+  (* pose f x y := (siteMap g).[? y] == Some x. *)
+  (* rewrite (fset_negb_exists (nodes g) ss f). *)
+  (* rewrite fsetD_negb. *)
+  (* rewrite fset_binary_exists. *)
+  (* pose f x y := (siteMap g).[? y] == Some x. *)
+  (* rewrite -(fset_negb_exists (nodes g) ss f). *)
+  rewrite /remove_sites /nodes /=. symmetry.
+  apply/fsetP => n. apply/imfsetP.
+  case: ifP => /=.
+  move/[dup]/in_codomf_rem/[swap] => nIc.
+  rewrite mem_codomf => /existsP[t Ht].
+  exists n => //. rewrite !inE. (* sIss. *)
+  apply/andP. split.
+  apply/existsP. by exists t.
+  apply/forallP => u.
+  move: nIc. rewrite mem_codomf => /existsP[v Hv].
+  rewrite codomf_rem_exists in nIc.
+Admitted.
 
 Lemma remove_nodeN (n : N) :
   nodes (remove_node g n) = nodes g `\ n.
@@ -197,9 +322,11 @@ Lemma remove_nodeS (n : N) :
   sites (remove_node g n) =
     sites g `\` [fset val s | s in sites_of g n].
 Proof using Type.
-  apply/fsetP => s. rewrite !inE.
-  case: (s \in sites g) => // /=.
-  by rewrite andbF.
+  apply/fsetP => s.
+  by rewrite !inE /= unfold_in topredE andbCA andbb.
+  (* apply/fsetP => s. rewrite !inE. *)
+  (* case: (s \in sites g) => // /=. *)
+  (* by rewrite andbF. *)
 Qed.
 
 End CG_NS.
