@@ -263,6 +263,17 @@ Proof using Type.
   by exists t.
 Qed.
 
+Lemma remove_sitesS ss :
+  sites (remove_sites g ss) = sites g `\` ss.
+Proof using Type.
+  apply/fsetP => s.
+  rewrite in_fsep /sites /= in_fsetD.
+  by rewrite andbC -andbA andbb.
+  (* rewrite in_fsep /sites /=. *)
+  (* by apply/(andPP idP (fsetDP _ _ _))/fsetDP *)
+  (* => [[_ [H sNIss]] | [H sNIss]]; split. *)
+Qed.
+
 Lemma remove_nodeN n :
   nodes (remove_node g n) = nodes g `\ n.
 Proof using Type.
