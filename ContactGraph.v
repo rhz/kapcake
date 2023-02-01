@@ -17,7 +17,7 @@ Local Open Scope fset.
 Local Open Scope fmap.
 Arguments val : simpl never.
 
-(* symmetric relations *)
+(* Symmetric relations *)
 Definition symb (T : finType) (R : rel T) :=
   [forall x, forall y, R x y == R y x].
 
@@ -39,7 +39,7 @@ Definition eq_sym (T : eqType) (p1 p2 : (T * T)) : bool :=
 Notation "p1 =sym= p2" := (eq_sym p1 p2)
   (at level 70, no associativity).
 
-(* finite sets *)
+(* Finite sets *)
 Section FinSet.
 Variable (T : choiceType).
 
@@ -69,17 +69,19 @@ Qed.
 
 End FinSet.
 
-(* finite maps *)
+(* Finite maps *)
 (* Extra lemmas for finite maps.
- * One of them will be soon integrated into mathcomp.finmap: codomf_cat.
+ * codomf_cat will be soon integrated into mathcomp.finmap.
  * codomf_const: codomf of constant map.
  *)
 Section FinMap.
 Variables (K V : choiceType).
 Implicit Types (f g : {fmap K -> V}) (v : V).
 
-Definition preimage_of f v
-  : {fset (domf f)} := [fset k | k : domf f & f k == v].
+Definition preimage_of f v : {fset (domf f)} :=
+  [fset k | k : domf f & f k == v].
+Notation "f ^-1 v" := (preimage_of f v)
+                        (at level 70, right associativity).
 
 Lemma codomf_cat f g :
   codomf (f + g) = codomf g `|` codomf f.[\domf g].
@@ -97,41 +99,31 @@ Qed.
 Lemma codomf_const (ks : {fset K}) v :
   ks != fset0 -> codomf [fmap _ : ks => v] = [fset v].
 Proof using Type.
-  move=> /fset0Pn [k k_in_ks].
-  apply/fsetP=> x. rewrite !inE. apply/existsP.
-  case: (boolP (x == v)) => [/eqP-> | xNEv] /=.
-  - exists [` k_in_ks]. by rewrite ffunE.
-  - move=> [x' /eqP H]. rewrite ffunE in H.
-    rewrite H in xNEv. by apply: (@neqxx _ x).
+  move=> /fset0Pn [k k_in_ks]. apply/fsetP=> w.
+  apply/codomfP/imfsetP. move=> [l /fndSomeP[lf H]].
+  exists w => //. by rewrite inE -H ffunE.
+  move=> [x /[!inE]/eqP H] ->. exists k. apply/fndSomeP.
+  exists k_in_ks. by rewrite H ffunE.
 Qed.
 
-Lemma in_codomf_cond f (P : pred K) v :
-  v \in [fset f k | k : domf f & P (val k)] <->
-  exists k : domf f, f k == v /\ P (val k).
+Lemma in_codomf_fset f (P : pred K) v :
+  v \in [fset f k | k : domf f & P (val k)] =
+  [exists k : domf f, (f k == v) && P (val k)].
 Proof using Type.
-Admitted.
-
-(* Definition setks (m : {fmap K -> V}) (ks : {fset K}) (v : V) := *)
-(*   m + [fmap _ : ks => v]. *)
-
-(* Lemma setksD (m : {fmap K -> V}) (ks : {fset K}) (v : V) : *)
-(*   domf (setks m ks v) = ks `|` domf m. *)
-(* Proof using Type. by rewrite domf_cat fsetUC. Qed. *)
-
-(* Lemma setksC (m : {fmap K -> V}) (ks : {fset K}) (v : V) : *)
-(*   ks != fset0 -> *)
-(*   codomf (setks m ks v) = v |` codomf m.[\ ks]. *)
-(* Proof using Type. *)
-(*   move=> H. by rewrite codomf_cat codomf_const. *)
-(* Qed. *)
+  apply/imfsetP/existsP. move=> [k /[!inE]/andP[_ H1]] /eqP H2.
+  exists k. by rewrite eqtype.eq_sym H2 H1.
+  (* second part *)
+  move=> [k /andP[/eqP H HP]]. exists k. by rewrite !inE HP.
+  by rewrite H.
+Qed.
 
 End FinMap.
 
 Section NS.
-(* types for nodes and sites *)
+(* Types for nodes and sites *)
 Variables (N S : choiceType).
 
-(* contact graphs *)
+(* Contact graphs *)
 Record cg : Type :=
   CG { siteMap : {fmap S -> N}
      ; edges : rel S
@@ -247,7 +239,9 @@ Lemma remove_sitesN ss :
 Proof using Type.
   rewrite /remove_sites /nodes /= codomf_rem -fsetD_negb.
   symmetry. apply/fsetP => n. apply/imfsetP. case: ifP.
-  move/(in_codomf_cond _ (fun s => s \notin ss)) => [s [H1 H2]].
+  rewrite (in_codomf_fset _ (fun s => s \notin ss)).
+  move=> /existsP[s /andP[H1 H2]].
+  (* move/(in_codomf_fset _ (fun s => s \notin ss) _) => [s [H1 H2]]. *)
   exists n => //. rewrite !inE. apply/andP. split.
   apply/existsP. by exists s.
   apply/negP. move/sites_of_subset => H.
@@ -258,9 +252,9 @@ Proof using Type.
   move: H1. rewrite !inE -H2 => /andP[_ H3].
   apply/negP: H. rewrite negbK.
   move: H3. move/sites_of_not_subset => [t [H4 H5]].
-  rewrite (in_codomf_cond _ (fun s => s \notin ss)).
+  rewrite (in_codomf_fset _ (fun s => s \notin ss)).
   move: (iffRL (in_sites_of n t) H4) => H6.
-  by exists t.
+  apply/existsP. exists t. by apply/andP.
 Qed.
 
 Lemma remove_sitesS ss :
