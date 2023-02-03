@@ -9,8 +9,8 @@ Unset Printing Implicit Defensive.
 
 Module ContactGraphs.
 
-Lemma neqxx (T: eqType) (x : T) : ~(x != x).
-Proof. move=> /eqP xNEx. by apply: xNEx. Qed.
+(* Lemma neqxx (T: eqType) (x : T) : ~(x != x). *)
+(* Proof. move=> /eqP xNEx. by apply: xNEx. Qed. *)
 
 Coercion fset_sub_finType : finSet >-> finType.
 Local Open Scope fset.
@@ -65,6 +65,36 @@ Proof using Type.
   move=> [xIX xNIfsetP]. exists x => //=. rewrite !inE.
   apply/andP. split=> //. apply/negP => HP. apply/negP: xNIfsetP.
   rewrite negbK in_fsep. apply/andP. by split.
+Qed.
+
+(* Lemma in_val (U : {fset T}) (A : {fset U}) (x : T) : *)
+(*   x \in val @` A -> exists y : U, val y = x. *)
+(* Proof using Type. *)
+(*   move/imfsetP => [z zIA zEx]. by exists z. *)
+(* Qed. *)
+
+(* Lemma val_in_val (U : {fset T}) (A : {fset U}) (x : U) : *)
+(*   val x \in val @` A <-> x \in A. *)
+(* Proof using Type. *)
+(*   split=> [/imfsetP[y yIA xEy] | H]. *)
+(*   by move: (val_inj xEy) => ->. *)
+(*   apply/imfsetP. exists x => //. *)
+(* Qed. *)
+
+Lemma val_fsubset_in (U X : {fset T}) (A : {fset U}) :
+  val @` A `<=` X ->
+  forall x : U, x \in A -> val x \in X.
+Proof using Type.
+  move=> /fsubsetP H x xIA. apply: (H (val x)).
+  apply/imfsetP. by exists x.
+Qed.
+
+Lemma val_fsubset_notin (U X : {fset T}) (A : {fset U}) :
+  ~~ (val @` A `<=` X) ->
+  (exists a : U, a \in A /\ val a \notin X).
+Proof using Type.
+  move=> /fsubsetPn[a /imfsetP[y yIA aEy] aNIX].
+  exists y. split=> //. by rewrite -aEy.
 Qed.
 
 End FinSet.
@@ -194,19 +224,11 @@ Implicit Types (n : N) (ss : {fset S}).
 
 Lemma in_sites_of n (s : sites g) :
   siteMap g s == n <-> s \in sites_of g n.
-Proof using Type. Admitted.
-
-Lemma sites_of_subset n ss :
-  val @` sites_of g n `<=` ss ->
-  (forall s : sites g,
-      s \in sites_of g n -> val s \in ss).
-Proof using Type. Admitted.
-
-Lemma sites_of_not_subset n ss :
-  ~~ (val @` sites_of g n `<=` ss) ->
-  (exists s : sites g,
-      s \in sites_of g n /\ val s \notin ss).
-Proof using Type. Admitted.
+Proof using Type.
+  split. move=> /eqP <-.
+  by rewrite !inE eqxx.
+  by rewrite !inE.
+Qed.
 
 Lemma add_nodeN n ss :
   ss != fset0 ->
@@ -244,14 +266,14 @@ Proof using Type.
   (* move/(in_codomf_fset _ (fun s => s \notin ss) _) => [s [H1 H2]]. *)
   exists n => //. rewrite !inE. apply/andP. split.
   apply/existsP. by exists s.
-  apply/negP. move/sites_of_subset => H.
+  apply/negP. move/val_fsubset_in => H.
   move: (H s (iffLR (in_sites_of n s) H1)). exact/negP.
   (* second part *)
   move=> /negbT H /= [n' H1 H2].
   (* move: H1. rewrite !inE -H2 => /andP[/existsP[s sSOn'] H3]. *)
   move: H1. rewrite !inE -H2 => /andP[_ H3].
   apply/negP: H. rewrite negbK.
-  move: H3. move/sites_of_not_subset => [t [H4 H5]].
+  move: H3. move/val_fsubset_notin => [t [H4 H5]].
   rewrite (in_codomf_fset _ (fun s => s \notin ss)).
   move: (iffRL (in_sites_of n t) H4) => H6.
   apply/existsP. exists t. by apply/andP.
