@@ -194,7 +194,7 @@ Definition add_edge (s t : S) : cg.
   case: ((x == s) && (y == t)). by rewrite [_ || true]orbC.
   case: ((y == s) && (x == t)) => //.
   rewrite !orFb. by apply: (@edges_sym g).
-Qed.
+Defined.
 
 Definition remove_edge (s t : S) : cg.
   pose es x y := if (x, y) =sym= (s, t) then false else @edges g x y.
@@ -203,7 +203,7 @@ Definition remove_edge (s t : S) : cg.
   rewrite /es /eq_sym /symmetric => x y.
   case: ((x == s) && (y == t)). by rewrite [_ || true]orbC.
   case: ((y == s) && (x == t)) => // /=. by apply: (@edges_sym g).
-Qed.
+Defined.
 
 End CG.
 End NS.
@@ -239,21 +239,34 @@ Qed.
 
 Lemma add_nodeN0 n ss :
   ss == fset0 ->
-  nodes (add_node g n ss) = nodes (remove_sites g ss).
-Proof using Type. Admitted.
+  nodes (add_node g n ss) = nodes g.
+Proof using Type.
+  move=> /eqP ->. rewrite /add_node /add_sites /nodes /=.
+  by rewrite (@fmap_nil S N [fmap _ : fset0 => n]) // catf0.
+Qed.
 
 Lemma add_nodeS n ss :
   sites (add_node g n ss) = sites g `|` ss.
 Proof using Type. by rewrite /sites /= fsetUDr fsetDv fsetD0. Qed.
 
+Lemma add_nodeE n ss :
+  edges (add_node g n ss) = edges g.
+Proof using Type. done. Qed.
+
 Lemma add_sitesN (f : {fmap S -> N}) :
   nodes (add_sites g f) =
     codomf f `|` nodes (remove_sites g (domf f)).
-Proof using Type. Admitted.
+Proof using Type.
+  by rewrite /add_sites /remove_sites /nodes /= codomf_cat.
+Qed.
 
 Lemma add_sitesS (f : {fmap S -> N}) :
   sites (add_sites g f) = sites g `|` domf f.
 Proof using Type. by rewrite /sites /= fsetUDr fsetDv fsetD0. Qed.
+
+Lemma add_sitesE n (f : {fmap S -> N}) :
+  edges (add_sites g f) = edges g.
+Proof using Type. done. Qed.
 
 Lemma remove_sitesN ss :
   nodes (remove_sites g ss) =
@@ -289,6 +302,10 @@ Proof using Type.
   (* by apply/(andPP idP (fsetDP _ _ _))/fsetDP *)
   (* => [[_ [H sNIss]] | [H sNIss]]; split. *)
 Qed.
+
+Lemma remove_sitesE ss :
+  edges (remove_sites g ss) = edges g.
+Proof using Type. done. Qed.
 
 Lemma remove_nodeN n :
   nodes (remove_node g n) = nodes g `\ n.
@@ -327,6 +344,37 @@ Proof using Type.
   (* case: (s \in sites g) => // /=. *)
   (* by rewrite andbF. *)
 Qed.
+
+Lemma remove_nodeE n :
+  edges (remove_node g n) = edges g.
+Proof using Type. done. Qed.
+
+Lemma add_edgeN (s t : S) :
+  nodes (add_edge g s t) = nodes g.
+Proof using Type. done. Qed.
+
+Lemma add_edgeS (s t : S) :
+  sites (add_edge g s t) = sites g.
+Proof using Type. done. Qed.
+
+Lemma add_edgeE (s t : S) :
+  edges (add_edge g s t) =
+    (fun x y => ((x, y) =sym= (s, t)) || edges g x y).
+Proof using Type. done. Qed.
+
+Lemma remove_edgeN (s t : S) :
+  nodes (remove_edge g s t) = nodes g.
+Proof using Type. done. Qed.
+
+Lemma remove_edgeS (s t : S) :
+  sites (remove_edge g s t) = sites g.
+Proof using Type. done. Qed.
+
+Lemma remove_edgeE (s t : S) :
+  edges (remove_edge g s t) =
+    (fun x y => if (x, y) =sym= (s, t)
+                then false else edges g x y).
+Proof using Type. done. Qed.
 
 End CG_NS.
 End Lemmata.
