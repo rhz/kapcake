@@ -1,6 +1,7 @@
 COQMFFLAGS := -Q . KapCake
 
-ALLVFILES := NatMap.v NatSet.v Rel.v LibTactics.v Tactics.v SiteGraph.v
+# ALLVFILES := NatMap.v NatSet.v Rel.v LibTactics.v Tactics.v SiteGraph.v
+ALLVFILES := ContactGraph.v
 
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq

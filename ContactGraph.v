@@ -7,7 +7,7 @@ Unset Printing Implicit Defensive.
 (* Set Printing Coercions. *)
 (* Set Printing Implicit. *)
 
-Module ContactGraphs.
+(* Module ContactGraphs. *)
 
 (* Lemma neqxx (T: eqType) (x : T) : ~(x != x). *)
 (* Proof. move=> /eqP xNEx. by apply: xNEx. Qed. *)
@@ -217,7 +217,7 @@ End NS.
  * remove_nodeS: add_node and sites.
  * remove_nodeE: add_node and edges.
  *)
-Module Lemmata.
+(* Module Lemmata. *)
 Section CG_NS.
 Variables (N S : choiceType) (g : cg N S).
 Implicit Types (n : N) (ss : {fset S}).
@@ -377,6 +377,6 @@ Lemma remove_edgeE (s t : S) :
 Proof using Type. done. Qed.
 
 End CG_NS.
-End Lemmata.
+(* End Lemmata. *)
 
-End ContactGraphs.
+(* End ContactGraphs. *)
