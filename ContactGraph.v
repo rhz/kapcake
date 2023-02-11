@@ -260,16 +260,21 @@ End CG_NS.
 Section Realisable.
 Variables (N S : choiceType) (g : cg N S).
 
-Definition no_self_loop : bool :=
-  [forall s : sites g, edges g (val s) (val s) == false].
+(* Definition no_self_loop : bool := *)
+(*   [forall s : sites g, edges g (val s) (val s) == false]. *)
+(* Definition at_most_one_edge_per_site : bool := *)
+(*   [forall s : sites g, forall t : sites g, forall t' : sites g, *)
+(*       edges g (val s) (val t) && edges g (val s) (val t') *)
+(*         ==> (t == t')]. *)
 
-Definition at_most_one_edge_per_site : bool :=
+Definition is_realisable : bool :=
+  (* no_self_loop && at_most_one_edge_per_site. *)
+  (* no self loop *)
+  [forall s : sites g, edges g (val s) (val s) == false] &&
+  (* at most 1 incident edge per site *)
   [forall s : sites g, forall t : sites g, forall t' : sites g,
       edges g (val s) (val t) && edges g (val s) (val t')
         ==> (t == t')].
-
-Definition is_realisable : bool :=
-  no_self_loop && at_most_one_edge_per_site.
 
 End Realisable.
 
@@ -304,16 +309,11 @@ Import SGNotations.
 Definition g1 := [nat| 0 -> 0, 1 -> 1 |].
 Definition g2 := [nat| 0 -> 0, 1 -> 1 | 0 -- 1 |].
 
-Lemma forall_true (T : finType) :
-  [forall x : T, true] = true.
-Proof. by apply/forallP. Qed.
-
-Print g1. Print g2.
-Compute [forall _, true].
+(* Print g1. Print g2. *)
+(* why does the next line take forever? *)
 (* Compute (sites g1). *)
-Goal is_realisable g1 == true.
-  rewrite /is_realisable /no_self_loop /at_most_one_edge_per_site /=.
-  by rewrite /rel0 eqxx !forall_true /=.
-Qed.
+(* Goal is_realisable g1 == true. *)
+(*   by rewrite /is_realisable /= /rel0 eqxx !forall_true. *)
+(* Qed. *)
 
 (* End ContactGraphs. *)

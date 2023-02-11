@@ -1,6 +1,5 @@
-From mathcomp
-Require Export eqtype fintype choice ssrbool ssreflect
-  ssrfun finfun finmap.
+From KapCake Require Export mathcomp_ext.
+From mathcomp Require Export choice ssrfun finfun finmap.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.

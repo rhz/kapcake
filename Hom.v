@@ -46,21 +46,21 @@ Record hom : Type :=
               then edges cod s' t' else false]
     }.
 
-Lemma f_nodes_totalP (h : hom) :
-  [forall n : nodes (dom h), exists m : nodes (cod h),
+Lemma f_nodes_totalP (h : hom) (n : nodes (dom h)) :
+  [exists m : nodes (cod h),
       (f_nodes h).[? val n] == Some (val m)].
 Proof using Type.
-  apply/'forall_existsP. rewrite (eqP (f_nodes_total h)) => n.
+  apply/existsP. move: n. rewrite (eqP (f_nodes_total h)) => n.
   exists [`fsubsetP (f_nodes_in_cod h) _ (in_codomf n)].
   by rewrite Some_fnd.
 Qed.
 
-Lemma f_sites_totalP (h : hom) :
-  [forall s : sites (dom h), exists t : sites (cod h),
+Lemma f_sites_totalP (h : hom) (s : sites (dom h)) :
+  [exists t : sites (cod h),
       (f_sites h).[? val s] == Some (val t)].
 Proof using Type.
-  apply/'forall_existsP. rewrite (eqP (f_sites_total h)) => n.
-  exists [`fsubsetP (f_sites_in_cod h) _ (in_codomf n)].
+  apply/existsP. move: s. rewrite (eqP (f_sites_total h)) => s.
+  exists [`fsubsetP (f_sites_in_cod h) _ (in_codomf s)].
   by rewrite Some_fnd.
 Qed.
 
