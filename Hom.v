@@ -1,10 +1,7 @@
-From mathcomp
-  Require Import ssreflect ssrbool ssrnat ssrfun
-  eqtype choice fintype seq finfun finmap.
+From KapCake Require Import finmap_ext ContactGraph.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-From KapCake Require Import ContactGraph.
 
 Local Open Scope fset.
 Local Open Scope fmap.
@@ -52,11 +49,19 @@ Record hom : Type :=
 Lemma f_nodes_totalP (h : hom) :
   [forall n : nodes (dom h), exists m : nodes (cod h),
       (f_nodes h).[? val n] == Some (val m)].
-Proof using Type. Admitted.
+Proof using Type.
+  apply/'forall_existsP. rewrite (eqP (f_nodes_total h)) => n.
+  exists [`fsubsetP (f_nodes_in_cod h) _ (in_codomf n)].
+  by rewrite Some_fnd.
+Qed.
 
 Lemma f_sites_totalP (h : hom) :
   [forall s : sites (dom h), exists t : sites (cod h),
       (f_sites h).[? val s] == Some (val t)].
-Proof using Type. Admitted.
+Proof using Type.
+  apply/'forall_existsP. rewrite (eqP (f_sites_total h)) => n.
+  exists [`fsubsetP (f_sites_in_cod h) _ (in_codomf n)].
+  by rewrite Some_fnd.
+Qed.
 
 End NS.

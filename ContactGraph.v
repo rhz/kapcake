@@ -1,21 +1,14 @@
-From mathcomp
-Require Import ssreflect ssrbool ssrnat ssrfun
-  eqtype choice fintype seq finfun finmap.
+Require Import Program.
+From KapCake Require Import finmap_ext.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 (* Set Printing Coercions. *)
 (* Set Printing Implicit. *)
-
 (* Module ContactGraphs. *)
 
-(* Lemma neqxx (T: eqType) (x : T) : ~(x != x). *)
-(* Proof. move=> /eqP xNEx. by apply: xNEx. Qed. *)
-
-Coercion fset_sub_finType : finSet >-> finType.
 Local Open Scope fset.
 Local Open Scope fmap.
-Arguments val : simpl never.
 
 (* Symmetric relations *)
 Definition symb (T : finType) (R : rel T) :=
@@ -39,116 +32,6 @@ Definition eq_sym (T : eqType) (p1 p2 : (T * T)) : bool :=
 Notation "p1 =sym= p2" := (eq_sym p1 p2)
   (at level 70, no associativity).
 
-(* Finite sets *)
-Section FinSet.
-Variable (T : choiceType).
-
-(* two lemmas from finmap_plus.v in graph-theory/theories/core *)
-Lemma fsetDl (A B : {fset T}) k :
-  k \in A `\` B -> k \in A.
-Proof using Type. by case/fsetDP. Qed.
-
-Lemma in_fsep (A : {fset T}) (P : pred T) (y : T) :
-  y \in [fset x | x in A & P x] = (y \in A) && (P y).
-Proof using Type.
-  apply/imfsetP/andP => /= [[x]|[H1 H2]];
-    first by rewrite inE => /andP[H1 H2] ->.
-  exists y => //. by rewrite inE H1.
-Qed.
-
-Lemma fsetD_negb (X : {fset T}) (P : pred T) :
-  [fset x in X | ~~(P x)] = X `\` [fset x in X | P x].
-Proof using Type.
-  apply/fsetP => x. apply/imfsetP/fsetDP.
-  move=> [y H ->]. move: H. rewrite !inE => /andP[H1 H2] //.
-  split=> //. rewrite negb_and. apply/orP. by right.
-  move=> [xIX xNIfsetP]. exists x => //=. rewrite !inE.
-  apply/andP. split=> //. apply/negP => HP. apply/negP: xNIfsetP.
-  rewrite negbK in_fsep. apply/andP. by split.
-Qed.
-
-(* Lemma in_val (U : {fset T}) (A : {fset U}) (x : T) : *)
-(*   x \in val @` A -> exists y : U, val y = x. *)
-(* Proof using Type. *)
-(*   move/imfsetP => [z zIA zEx]. by exists z. *)
-(* Qed. *)
-
-(* Lemma val_in_val (U : {fset T}) (A : {fset U}) (x : U) : *)
-(*   val x \in val @` A <-> x \in A. *)
-(* Proof using Type. *)
-(*   split=> [/imfsetP[y yIA xEy] | H]. *)
-(*   by move: (val_inj xEy) => ->. *)
-(*   apply/imfsetP. exists x => //. *)
-(* Qed. *)
-
-Lemma val_fsubset_in (U X : {fset T}) (A : {fset U}) :
-  val @` A `<=` X ->
-  forall x : U, x \in A -> val x \in X.
-Proof using Type.
-  move=> /fsubsetP H x xIA. apply: (H (val x)).
-  apply/imfsetP. by exists x.
-Qed.
-
-Lemma val_fsubset_notin (U X : {fset T}) (A : {fset U}) :
-  ~~ (val @` A `<=` X) ->
-  (exists a : U, a \in A /\ val a \notin X).
-Proof using Type.
-  move=> /fsubsetPn[a /imfsetP[y yIA aEy] aNIX].
-  exists y. split=> //. by rewrite -aEy.
-Qed.
-
-End FinSet.
-
-(* Finite maps *)
-(* Extra lemmas for finite maps.
- * codomf_cat will be soon integrated into mathcomp.finmap.
- * codomf_const: codomf of constant map.
- *)
-Section FinMap.
-Variables (K V : choiceType).
-Implicit Types (f g : {fmap K -> V}) (v : V).
-
-Definition preimage_of f v : {fset (domf f)} :=
-  [fset k | k : domf f & f k == v].
-Notation "f ^-1 v" := (preimage_of f v)
-                        (at level 70, right associativity).
-
-Lemma codomf_cat f g :
-  codomf (f + g) = codomf g `|` codomf f.[\domf g].
-Proof using Type.
-  apply/fsetP => v. rewrite ![RHS]inE.
-  apply/codomfP/(orPP (codomfP _ _) (codomfP _ _)); last first.
-  - move=> [] [x xI]; exists x; rewrite fnd_cat.
-    + by case: fndP xI.
-    + move: xI. rewrite fnd_rem. by case: ifP.
-  - move=> [] x. rewrite fnd_cat. case: fndP => // [xg gx|xNg fx].
-    + left. exists x. by rewrite in_fnd.
-    + right. exists x. by rewrite fnd_rem ifN.
-Qed.
-
-Lemma codomf_const (ks : {fset K}) v :
-  ks != fset0 -> codomf [fmap _ : ks => v] = [fset v].
-Proof using Type.
-  move=> /fset0Pn [k k_in_ks]. apply/fsetP=> w.
-  apply/codomfP/imfsetP. move=> [l /fndSomeP[lf H]].
-  exists w => //. by rewrite inE -H ffunE.
-  move=> [x /[!inE]/eqP H] ->. exists k. apply/fndSomeP.
-  exists k_in_ks. by rewrite H ffunE.
-Qed.
-
-Lemma in_codomf_fset f (P : pred K) v :
-  v \in [fset f k | k : domf f & P (val k)] =
-  [exists k : domf f, (f k == v) && P (val k)].
-Proof using Type.
-  apply/imfsetP/existsP. move=> [k /[!inE]/andP[_ H1]] /eqP H2.
-  exists k. by rewrite eqtype.eq_sym H2 H1.
-  (* second part *)
-  move=> [k /andP[/eqP H HP]]. exists k. by rewrite !inE HP.
-  by rewrite H.
-Qed.
-
-End FinMap.
-
 Section NS.
 (* Types for nodes and sites *)
 Variables (N S : choiceType).
@@ -158,6 +41,7 @@ Record cg : Type :=
   CG { siteMap : {fmap S -> N}
      ; edges : rel S
      ; edges_sym : symmetric edges
+     (* wildcards *)
     }.
 
 Definition empty : cg := @CG fmap0 _ (@rel0_sym S).
@@ -186,28 +70,67 @@ Definition remove_site (s : S) : cg :=
 Definition remove_node (n : N) : cg :=
   remove_sites [fsetval s in sites_of n].
 
-Definition add_edge (s t : S) : cg.
-  pose es x y := ((x, y) =sym= (s, t)) || (@edges g x y).
-  have @es_sym : symmetric es; last first.
-    exact: (@CG (siteMap g) es es_sym).
-  rewrite /es /eq_sym /symmetric => x y.
-  case: ((x == s) && (y == t)). by rewrite [_ || true]orbC.
-  case: ((y == s) && (x == t)) => //.
-  rewrite !orFb. by apply: (@edges_sym g).
-Defined.
+Program Definition add_edge (s t : S) : cg :=
+  @CG (siteMap g)
+    (fun x y => ((x, y) =sym= (s, t)) || (edges g x y)) _.
+Next Obligation.
+  move=> x y. by rewrite [_ && _ || _]orbC (eqP (edges_sym g x y)).
+Qed.
 
-Definition remove_edge (s t : S) : cg.
-  pose es x y := if (x, y) =sym= (s, t) then false else @edges g x y.
-  have @es_sym : symmetric es; last first.
-    exact: (@CG (siteMap g) es es_sym).
-  rewrite /es /eq_sym /symmetric => x y.
-  case: ((x == s) && (y == t)). by rewrite [_ || true]orbC.
-  case: ((y == s) && (x == t)) => // /=. by apply: (@edges_sym g).
-Defined.
+(* Definition add_edge (s t : S) : cg. *)
+(*   pose es x y := ((x, y) =sym= (s, t)) || (@edges g x y). *)
+(*   have @es_sym : symmetric es; last first. *)
+(*     exact: (@CG (siteMap g) es es_sym). *)
+(*   rewrite /es /eq_sym /symmetric => x y. *)
+(*   case: ((x == s) && (y == t)). by rewrite [_ || true]orbC. *)
+(*   case: ((y == s) && (x == t)) => //. *)
+(*   rewrite !orFb. by apply: (@edges_sym g). *)
+(* Defined. *)
+
+(* Definition add_edge' (s t : S) : cg := *)
+(* let es_sym := *)
+(*   fun x y : S => *)
+(*    if (x == s) && (y == t) *)
+(*    then eq_ind_r *)
+(*           (fun b : bool => true || (y == s) && (x == t) *)
+(*                            || edges g x y == b || edges g y x) *)
+(*           (eqxx (true || (y == s) && (x == t) || edges g y x)) *)
+(*           (orbC ((y == s) && (x == t)) true) *)
+(*    else if (y == s) && (x == t) as b *)
+(*        return (is_true (false || b || edges g x y == *)
+(*                         b || false || edges g y x)) *)
+(*       then (eqxx (true || false || edges g y x)) *)
+(*       else (eq_ind_r *)
+(*               (fun b : bool => b || edges g x y == *)
+(*                                b || edges g y x) *)
+(*               (eq_ind_r (fun b : bool => b == false || edges g y x) *)
+(*                  (eq_ind_r (fun b : bool => edges g x y == b) *)
+(*                     (edges_sym g x y) *)
+(*                     (orFb (edges g y x))) *)
+(*                  (orFb (edges g x y))) *)
+(*               (orFb false)) *)
+(*   in *)
+(*   @CG (siteMap g) *)
+(*     (fun x y => ((x, y) =sym= (s, t)) || (edges g x y)) es_sym. *)
+
+Program Definition remove_edge (s t : S) : cg :=
+  @CG (siteMap g)
+    (fun x y => if (x, y) =sym= (s, t) then false else edges g x y) _.
+Next Obligation.
+  move=> x y. by rewrite [_ && _ || _]orbC (eqP (edges_sym g x y)).
+Qed.
+
+(* Definition remove_edge (s t : S) : cg. *)
+(*   pose es x y := if (x, y) =sym= (s, t) then false else @edges g x y. *)
+(*   have @es_sym : symmetric es; last first. *)
+(*     exact: (@CG (siteMap g) es es_sym). *)
+(*   rewrite /es /eq_sym /symmetric => x y. *)
+(*   case: ((x == s) && (y == t)). by rewrite [_ || true]orbC. *)
+(*   case: ((y == s) && (x == t)) => // /=. by apply: (@edges_sym g). *)
+(* Defined. *)
 
 End CG.
 End NS.
-
 
 (* Lemmas for contact graphs.
  * add_nodeN: add_node and nodes.
@@ -378,5 +301,4 @@ Proof using Type. done. Qed.
 
 End CG_NS.
 (* End Lemmata. *)
-
 (* End ContactGraphs. *)
