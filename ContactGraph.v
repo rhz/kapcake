@@ -77,57 +77,12 @@ Next Obligation.
   move=> x y. by rewrite [_ && _ || _]orbC (eqP (edges_sym g x y)).
 Qed.
 
-(* Definition add_edge (s t : S) : cg. *)
-(*   pose es x y := ((x, y) =sym= (s, t)) || (@edges g x y). *)
-(*   have @es_sym : symmetric es; last first. *)
-(*     exact: (@CG (siteMap g) es es_sym). *)
-(*   rewrite /es /eq_sym /symmetric => x y. *)
-(*   case: ((x == s) && (y == t)). by rewrite [_ || true]orbC. *)
-(*   case: ((y == s) && (x == t)) => //. *)
-(*   rewrite !orFb. by apply: (@edges_sym g). *)
-(* Defined. *)
-
-(* Definition add_edge' (s t : S) : cg := *)
-(* let es_sym := *)
-(*   fun x y : S => *)
-(*    if (x == s) && (y == t) *)
-(*    then eq_ind_r *)
-(*           (fun b : bool => true || (y == s) && (x == t) *)
-(*                            || edges g x y == b || edges g y x) *)
-(*           (eqxx (true || (y == s) && (x == t) || edges g y x)) *)
-(*           (orbC ((y == s) && (x == t)) true) *)
-(*    else if (y == s) && (x == t) as b *)
-(*        return (is_true (false || b || edges g x y == *)
-(*                         b || false || edges g y x)) *)
-(*       then (eqxx (true || false || edges g y x)) *)
-(*       else (eq_ind_r *)
-(*               (fun b : bool => b || edges g x y == *)
-(*                                b || edges g y x) *)
-(*               (eq_ind_r (fun b : bool => b == false || edges g y x) *)
-(*                  (eq_ind_r (fun b : bool => edges g x y == b) *)
-(*                     (edges_sym g x y) *)
-(*                     (orFb (edges g y x))) *)
-(*                  (orFb (edges g x y))) *)
-(*               (orFb false)) *)
-(*   in *)
-(*   @CG (siteMap g) *)
-(*     (fun x y => ((x, y) =sym= (s, t)) || (edges g x y)) es_sym. *)
-
 Program Definition remove_edge (s t : S) : cg :=
   @CG (siteMap g)
     (fun x y => if (x, y) =sym= (s, t) then false else edges g x y) _.
 Next Obligation.
   move=> x y. by rewrite [_ && _ || _]orbC (eqP (edges_sym g x y)).
 Qed.
-
-(* Definition remove_edge (s t : S) : cg. *)
-(*   pose es x y := if (x, y) =sym= (s, t) then false else @edges g x y. *)
-(*   have @es_sym : symmetric es; last first. *)
-(*     exact: (@CG (siteMap g) es es_sym). *)
-(*   rewrite /es /eq_sym /symmetric => x y. *)
-(*   case: ((x == s) && (y == t)). by rewrite [_ || true]orbC. *)
-(*   case: ((y == s) && (x == t)) => // /=. by apply: (@edges_sym g). *)
-(* Defined. *)
 
 End CG.
 End NS.
@@ -261,7 +216,7 @@ Lemma remove_nodeS n :
     sites g `\` [fset val s | s in sites_of g n].
 Proof using Type.
   apply/fsetP => s.
-  by rewrite !inE /= unfold_in topredE andbCA andbb.
+  by rewrite !inE andbCA andbb.
   (* alternative proof *)
   (* apply/fsetP => s. rewrite !inE. *)
   (* case: (s \in sites g) => // /=. *)
@@ -301,4 +256,64 @@ Proof using Type. done. Qed.
 
 End CG_NS.
 (* End Lemmata. *)
+
+Section Realisable.
+Variables (N S : choiceType) (g : cg N S).
+
+Definition no_self_loop : bool :=
+  [forall s : sites g, edges g (val s) (val s) == false].
+
+Definition at_most_one_edge_per_site : bool :=
+  [forall s : sites g, forall t : sites g, forall t' : sites g,
+      edges g (val s) (val t) && edges g (val s) (val t')
+        ==> (t == t')].
+
+Definition is_realisable : bool :=
+  no_self_loop && at_most_one_edge_per_site.
+
+End Realisable.
+
+(* Notations *)
+Module SGNotations.
+
+Declare Custom Entry siteMapping.
+Notation "[ T | s1 , .. , s2 |]" :=
+  (let e := empty [choiceType of T] [choiceType of T]
+   in (add_site .. (add_site e (snd s1) (fst s1)) ..
+         (snd s2) (fst s2)))
+    (at level 0, s1 custom siteMapping, s2 custom siteMapping).
+Notation "s -> u" := ((s, u)) (in custom siteMapping at level 2,
+                           s constr at level 1, u constr at level 1).
+
+Declare Custom Entry edge.
+Notation "[ T | s1 , .. , s2 | e1 , .. , e2 |]" :=
+  (let e := empty [choiceType of T] [choiceType of T] in
+   let g := (add_site .. (add_site e (snd s1) (fst s1)) ..
+               (snd s2) (fst s2))
+   in (add_edge .. (add_edge g (fst e1) (snd e1)) ..
+         (fst e2) (snd e2)))
+    (at level 0, s1 custom siteMapping, s2 custom siteMapping,
+      e1 custom edge, e2 custom edge).
+Notation "s1 -- s2" := ((s1, s2)) (in custom edge at level 2,
+                             s1 constr at level 1,
+                             s2 constr at level 1).
+End SGNotations.
+Import SGNotations.
+
+(* Examples of the above notations. *)
+Definition g1 := [nat| 0 -> 0, 1 -> 1 |].
+Definition g2 := [nat| 0 -> 0, 1 -> 1 | 0 -- 1 |].
+
+Lemma forall_true (T : finType) :
+  [forall x : T, true] = true.
+Proof. by apply/forallP. Qed.
+
+Print g1. Print g2.
+Compute [forall _, true].
+(* Compute (sites g1). *)
+Goal is_realisable g1 == true.
+  rewrite /is_realisable /no_self_loop /at_most_one_edge_per_site /=.
+  by rewrite /rel0 eqxx !forall_true /=.
+Qed.
+
 (* End ContactGraphs. *)
