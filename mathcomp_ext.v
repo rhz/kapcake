@@ -1,8 +1,9 @@
-From mathcomp
-Require Export eqtype fintype ssrbool ssreflect.
+From mathcomp Require Export eqtype fintype ssrbool ssreflect.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
+Arguments val : simpl never.
 
 Lemma forall_true (T : finType) :
   [forall x : T, true] = true.

@@ -42,9 +42,11 @@ Record cg : Type :=
      ; edges : rel S
      ; edges_sym : symmetric edges
      (* wildcards *)
+     ; wildcards : {fset S}
+     ; w_in_sites : wildcards `<=` domf siteMap
     }.
 
-Definition empty : cg := @CG fmap0 _ (@rel0_sym S).
+Definition empty : cg := @CG fmap0 _ (@rel0_sym S) fset0 (fsub0set _).
 
 Section CG.
 Variable (g : cg).
@@ -53,7 +55,8 @@ Definition sites : {fset S} := domf (siteMap g).
 Definition sites_of (n : N) : {fset sites} := preimage_of (siteMap g) n.
 
 Definition add_sites (m : {fmap S -> N}) : cg :=
-  @CG (siteMap g + m) (edges g) (edges_sym g).
+  @CG (siteMap g + m) (edges g) (edges_sym g)
+    (wildcards g) (fsubset_cat _ (w_in_sites g)).
 
 Definition add_site (n : N) (s : S) : cg :=
   add_sites [fmap].[s <- n].
@@ -61,8 +64,13 @@ Definition add_site (n : N) (s : S) : cg :=
 Definition add_node (n : N) (ss : {fset S}) : cg :=
   add_sites [fmap _ : ss => n].
 
-Definition remove_sites (ss : {fset S}) : cg :=
-  @CG (siteMap g).[\ ss] (edges g) (edges_sym g).
+Program Definition remove_sites (ss : {fset S}) : cg :=
+  @CG (siteMap g).[\ ss] (edges g) (edges_sym g)
+    (wildcards g `\` ss) _.
+Next Obligation.
+  apply/fsubsetP => s /fsetDP [sIw sNIss]. rewrite !inE sNIss.
+  by move: (fsubsetP (w_in_sites g) _ sIw) => ->.
+Qed.
 
 Definition remove_site (s : S) : cg :=
   remove_sites [fset s].
@@ -72,14 +80,16 @@ Definition remove_node (n : N) : cg :=
 
 Program Definition add_edge (s t : S) : cg :=
   @CG (siteMap g)
-    (fun x y => ((x, y) =sym= (s, t)) || (edges g x y)) _.
+    (fun x y => ((x, y) =sym= (s, t)) || (edges g x y)) _
+    (wildcards g) (w_in_sites g).
 Next Obligation.
   move=> x y. by rewrite [_ && _ || _]orbC (eqP (edges_sym g x y)).
 Qed.
 
 Program Definition remove_edge (s t : S) : cg :=
   @CG (siteMap g)
-    (fun x y => if (x, y) =sym= (s, t) then false else edges g x y) _.
+    (fun x y => if (x, y) =sym= (s, t) then false else edges g x y) _
+    (wildcards g) (w_in_sites g).
 Next Obligation.
   move=> x y. by rewrite [_ && _ || _]orbC (eqP (edges_sym g x y)).
 Qed.
@@ -274,7 +284,10 @@ Definition is_realisable : bool :=
   (* at most 1 incident edge per site *)
   [forall s : sites g, forall t : sites g, forall t' : sites g,
       edges g (val s) (val t) && edges g (val s) (val t')
-        ==> (t == t')].
+        ==> (t == t')] &&
+  (* wildcard sites aren't bound *)
+  [forall s : sites g, (val s \in wildcards g) ==>
+    [forall t : sites g, edges g (val s) (val t) == false]].
 
 End Realisable.
 

@@ -1,14 +1,14 @@
 From KapCake Require Export mathcomp_ext.
-From mathcomp Require Export choice ssrfun finfun finmap.
+(* TODO: why is eqtype needed on the next line when it should *)
+(* have been exported by the previous line? *)
+From mathcomp Require Export eqtype choice ssrfun finfun finmap.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
 Local Open Scope fset.
 Local Open Scope fmap.
 
 Coercion fset_sub_finType : finSet >-> finType.
-Arguments val : simpl never.
 
 (* Finite sets *)
 Section FinSet.
@@ -116,6 +116,14 @@ Proof using Type.
   (* second part *)
   move=> [k /andP[/eqP H HP]]. exists k. by rewrite !inE HP.
   by rewrite H.
+Qed.
+
+Lemma fsubset_cat (A : {fset K}) f g :
+  A `<=` domf f -> A `<=` domf (f + g).
+Proof using Type.
+  move=> /fsubsetP Asub_domf. apply/fsubsetP => k kIA.
+  move: (Asub_domf k kIA) => kIdomf.
+  by rewrite !inE kIdomf.
 Qed.
 
 End FinMap.
