@@ -38,20 +38,6 @@ Proof using Type.
   rewrite negbK in_fsep. apply/andP. by split.
 Qed.
 
-(* Lemma in_val (U : {fset T}) (A : {fset U}) (x : T) : *)
-(*   x \in val @` A -> exists y : U, val y = x. *)
-(* Proof using Type. *)
-(*   move/imfsetP => [z zIA zEx]. by exists z. *)
-(* Qed. *)
-
-(* Lemma val_in_val (U : {fset T}) (A : {fset U}) (x : U) : *)
-(*   val x \in val @` A <-> x \in A. *)
-(* Proof using Type. *)
-(*   split=> [/imfsetP[y yIA xEy] | H]. *)
-(*   by move: (val_inj xEy) => ->. *)
-(*   apply/imfsetP. exists x => //. *)
-(* Qed. *)
-
 Lemma val_fsubset_in (U X : {fset T}) (A : {fset U}) :
   val @` A `<=` X ->
   forall x : U, x \in A -> val x \in X.
@@ -67,6 +53,28 @@ Proof using Type.
   move=> /fsubsetPn[a /imfsetP[y yIA aEy] aNIX].
   exists y. split=> //. by rewrite -aEy.
 Qed.
+
+Lemma fset_eq_in (A B : {fset T}) (AEB : A = B) (x : T) :
+  (x \in A) = (x \in B).
+Proof using Type.
+  move/eqP: AEB. rewrite eqEfsubset => /andP[AIB BIA].
+  apply/idP/idP; by apply: fsubsetP.
+Qed.
+
+Lemma fset_eq_inl (A B : {fset T}) (AEB : A = B) (x : T) :
+  (x \in A) -> (x \in B).
+Proof using Type.
+  move/eqP: AEB. rewrite eqEfsubset => /andP[AIB BIA].
+  by apply: fsubsetP.
+Qed.
+
+Lemma fset_eq_inr (A B : {fset T}) (AEB : A = B) (x : T) :
+  (x \in B) -> (x \in A).
+Proof using Type.
+  move/eqP: AEB. rewrite eqEfsubset => /andP[AIB BIA].
+  by apply: fsubsetP.
+Qed.
+
 
 End FinSet.
 
@@ -112,7 +120,7 @@ Lemma in_codomf_fset f (P : pred K) v :
   [exists k : domf f, (f k == v) && P (val k)].
 Proof using Type.
   apply/imfsetP/existsP. move=> [k /[!inE]/andP[_ H1]] /eqP H2.
-  exists k. by rewrite eqtype.eq_sym H2 H1.
+  exists k. by rewrite eq_sym H2 H1.
   (* second part *)
   move=> [k /andP[/eqP H HP]]. exists k. by rewrite !inE HP.
   by rewrite H.
@@ -127,3 +135,36 @@ Proof using Type.
 Qed.
 
 End FinMap.
+Section Composition.
+Variables (K V1 V2 : choiceType)
+  (f : {fmap K -> V1}) (g : {fmap V1 -> V2})
+  (fcodEgdom : codomf f = domf g).
+
+Definition fcomp : {fmap K -> V2} :=
+  [fmap x : domf f =>
+     val [`(in_codomf [`fset_eq_inl fcodEgdom (in_codomf x)])]].
+
+Lemma fcomp_domf : domf fcomp = domf f.
+Proof using Type. done. Qed.
+
+Lemma fcompEfg (k : K) (kIf : k \in domf f) (fkIg : f.[kIf] \in g) :
+  fcomp.[kIf] = g.[fkIg].
+Proof using Type. rewrite ffunE. apply: eq_getf. Qed.
+
+Lemma fcomp_codomf : codomf fcomp = codomf g.
+Proof using Type.
+  apply/fsetP => v2. apply/codomfP/codomfP.
+  - move=> [k /fndSomeP[kIfcomp fcompkEv]].
+    exists f.[kIfcomp]. apply/fndSomeP.
+    have fkIg : f.[kIfcomp] \in g. {
+      rewrite -(fset_eq_in fcodEgdom). apply: in_codomf. }
+    exists fkIg. by rewrite -fcompkEv fcompEfg.
+  - move=> [v1 /fndSomeP[v1Ig gv1Ev]].
+    have /codomfP[k /fndSomeP[kIf fkEv1]] : v1 \in codomf f. {
+      move: (v1Ig). by apply: fset_eq_inr. }
+    exists k. apply/fndSomeP. exists kIf.
+    rewrite -gv1Ev fcompEfg fkEv1 // => H.
+    by apply: eq_getf.
+Qed.
+
+End Composition.
