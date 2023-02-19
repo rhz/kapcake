@@ -81,10 +81,10 @@ Proof using Type.
 Qed.
 
 Lemma eq_fsubsetLR A B : A = B -> A `<=` B.
-Proof. move/eqP. by rewrite eqEfsubset => /andP[H _]. Qed.
+Proof using Type. move/eqP. by rewrite eqEfsubset => /andP[H _]. Qed.
 
 Lemma eq_fsubsetRL A B : A = B -> B `<=` A.
-Proof. move/eqP. by rewrite eqEfsubset => /andP[_ H]. Qed.
+Proof using Type. move/eqP. by rewrite eqEfsubset => /andP[_ H]. Qed.
 
 End FinSet.
 
@@ -144,21 +144,6 @@ Proof using Type.
   by rewrite !inE kIdomf.
 Qed.
 
-(* Lemma fmapE' f g (k : domf f) : *)
-(*   f = g -> exists (kg : val k \in domf g), f k = g.[kg]. *)
-(* Proof using Type. Admitted. *)
-(* Lemma fmapE f g (k : domf f) (fdomIgdom : domf f `<=` domf g) : *)
-(*   f = g -> f k = g (fincl fdomIgdom k). *)
-(* Proof using Type. Admitted. *)
-
-(* Lemma Some_fnd_eq f (A : {fset K}) (k : A) (AEfdom : A = domf f) : *)
-(*   f.[? val k] = Some (f.[fset_eq_inl AEfdom (fsvalP k)]). *)
-(* Proof using Type. Admitted. *)
-
-(* Lemma imeq f (A : {fset K}) (H : A = domf f) (k : A) : *)
-(*   f.[fset_eq_inl H (fsvalP k)] \in codomf f. *)
-(* Proof using Type. Admitted. *)
-
 (* Similar to in_codomf but it works on `k \in domf f` *)
 (* instead of a value of type `domf f`. *)
 Lemma im f (k : K) (kId : k \in domf f) : f.[kId] \in codomf f.
@@ -173,19 +158,32 @@ Variables (K V1 V2 : choiceType)
 Definition fcomp : {fmap K -> V2} :=
   [fmap x : domf f =>
      g.[fsubsetP fcodIgdom _ (in_codomf x)]].
-     (* val [`(in_codomf [`fsubsetP fcodIgdom _ (in_codomf x)])]]. *)
 
 Lemma fcomp_domf : domf fcomp = domf f.
 Proof using Type. done. Qed.
 
-Lemma fcompEfg (k : K) (kIf : k \in domf f) (fkIg : f.[kIf] \in g) :
-  fcomp.[kIf] = g.[fkIg].
-Proof using Type. rewrite ffunE. apply: eq_getf. Qed.
+(* Lemma fcompEfg (k : K) (kIf : k \in domf f) (fkIg : f.[kIf] \in g) : *)
+(*   fcomp.[kIf] = g.[fkIg]. *)
+(* Proof using Type. rewrite ffunE. apply: eq_getf. Qed. *)
+
+(* Lemma fdecomp (k : domf f) : *)
+(*   exists fkIg : f.[fsvalP k] \in g, *)
+(*     fcomp k = g.[fkIg]. *)
+(* Proof using Type. Admitted. *)
 
 Lemma fcomp_codomf : codomf fcomp `<=` codomf g.
 Proof using Type.
   apply/fsubsetP => v2. move/codomfP => [k /fndSomeP[kIf fckEv2]].
   rewrite -fckEv2 ffunE. apply: in_codomf.
+Qed.
+
+Lemma fdecomp (k : K) :
+    fcomp.[? k] = if f.[? k] is Some fk then g.[? fk] else None.
+Proof using Type.
+  rewrite /fcomp /fnd /omap /obind /oapp.
+  case: insubP => //= x xIf xEk. rewrite insubT.
+  apply: fsubsetP. apply: fcodIgdom. by apply: in_codomf.
+  move=> fxIg. congr Some. rewrite ffunE. by apply: eq_getf.
 Qed.
 
 End Composition.
@@ -207,16 +205,15 @@ Variables (K V1 V2 V3 : choiceType)
   (fgcodIhdom : codomf (fcomp fcodIgdom) `<=` domf h)
   (fcodIghdom : codomf f `<=` domf (fcomp gcodIhdom)).
 
+Lemma fcompA_fnd (k : K) :
+  (@fcomp K V1 V3 f (fcomp gcodIhdom) fcodIghdom).[? k] =
+  (@fcomp K V2 V3 (fcomp fcodIgdom) h fgcodIhdom).[? k].
+Proof using Type.
+  rewrite !fdecomp. case: f.[? k] => // v1. by rewrite fdecomp.
+Qed.
+
 Lemma fcompA : @fcomp K V1 V3 f (fcomp gcodIhdom) fcodIghdom =
                @fcomp K V2 V3 (fcomp fcodIgdom) h fgcodIhdom.
-Proof using Type.
-  apply/fmapP => k /=. rewrite /fnd /omap /obind /oapp.
-  case: fndP => kf //. rewrite ffunE /=.
-Admitted.
-
-Lemma fcompAx (x : domf f) :
-  @fcomp K V1 V3 f (fcomp gcodIhdom) fcodIghdom x =
-  @fcomp K V2 V3 (fcomp fcodIgdom) h fgcodIhdom x.
-Proof using Type. Admitted.
+Proof using Type. apply/fmapP. apply: fcompA_fnd. Qed.
 
 End CompositionOf3.

@@ -38,15 +38,7 @@ Record hom : Type :=
       ; smfn := @fcomp S N N (siteMap dom) f_nodes
                   (eq_fsubsetLR f_nodes_total)
       ; fssm := @fcomp S S N f_sites (siteMap cod) f_sites_in_cod
-      (* ; comm : [forall s : sites dom, *)
-      (*       f_nodes (siteMap dom s) == siteMap cod (f_sites s) *)
-      (* ; edge_pres : [forall s : sites dom, forall t : sites dom, *)
-      (*       edges dom (val s) (val t) == *)
-      (*         edges cod (f_sites s) (f_sites t)] *)
-      ; comm :
-        [forall s : sites dom, smfn s == fssm.[sf s]]
-            (* f_nodes.[? siteMap dom s] == *)
-            (*   (siteMap cod).[? f_sites.[sf s]]] *)
+      ; comm : smfn = fssm
       ; edge_pres :
         [forall s : sites dom, forall t : sites dom,
             edges dom (val s) (val t) ==
@@ -121,7 +113,7 @@ Next Obligation. (* f_nodes_total *)
   apply: fsubset_trans. apply: fcomp_codomf.
   apply: (f_nodes_in_cod h'). Qed.
 Next Obligation. (* comm *)
-  apply/forallP => s.
+  apply/fmapP => s.
   set cf_sites := fcomp comp_obligation_1.
   set cf_nodes := fcomp comp_obligation_2.
   set cfssm := @fcomp S S N cf_sites (siteMap (cod h'))
@@ -140,16 +132,10 @@ Next Obligation. (* comm *)
   - apply: fsubset_trans. apply: (f_sites_in_cod h).
     rewrite codEdom. by apply: (eq_fsubsetLR (f_sites_total h')).
   set cfssmA := @fcomp S S N (f_sites h) (fssm h') cfnIc2.
-  (* rewrite fcompAx. apply: (eq_fsubsetLR (f_nodes_total h)). *)
-  (* move=> H. Set Printing Implicit. *)
-  (* apply c2Idfn. *)
-  (* rewrite (fcompAx (eq_fsubsetLR (f_nodes_total h)) c2Idfn). *)
-  (* have H : csmfn = csmfnA by apply fcompA. *)
-  (* rewrite (fmapE _ _ H). *)
-  have -> : csmfn s = csmfnA s by apply fcompAx.
-  have -> : csmfnA s = steps.[sf s]. admit.
-  have -> : steps.[sf s] = cfssmA.[sf s]. admit.
-  have -> : cfssmA.[sf s] = cfssm.[sf s]. admit.
+  have -> : csmfn.[? s] = csmfnA.[? s] by apply: fcompA_fnd.
+  have -> : csmfnA.[? s] = steps.[? s]. admit.
+  have -> : steps.[? s] = cfssmA.[? s]. admit.
+  have -> : cfssmA.[? s] = cfssm.[? s]. admit.
   done.
 Admitted.
 
@@ -157,38 +143,8 @@ Admitted.
       ; f_sites_total : sites dom = domf f_sites
       ; f_nodes_in_cod : codomf f_nodes `<=` nodes cod
       ; f_sites_in_cod : codomf f_sites `<=` sites cod
-      ; comm :
-        [forall s : sites dom,
-            f_nodes.[? siteMap dom s] ==
-              if f_sites.[? val s] is Some s'
-              then (siteMap cod).[? s'] else None]
+      ; comm : smfn = fssm
 
-  rewrite (@Some_fnd_eq S S this_f_sites) ?(f_sites_total h) //
-          => this_f_sites_total.
-  have [n Hn] : exists n : nodes (dom h),
-      siteMap (dom h) s = val n.
-  admit.
-  rewrite Hn (@Some_fnd_eq N N this_f_nodes) ?(f_nodes_total h) //
-          => this_f_nodes_total.
-  apply/eqP. symmetry. apply/fndSomeP.
-  set s_fs := fset_eq_inl this_f_sites_total (fsvalP s).
-  have s3 : this_f_sites.[s_fs] \in siteMap (cod h').
-  admit.
-  exists s3.
-  set n_fn := fset_eq_inl this_f_nodes_total (fsvalP n).
-  have [s2 Hs2] : exists s2 : sites (dom h'),
-      siteMap (cod h') [`s3] =
-        (f_nodes h').[fset_eq_inl (f_nodes_total h') (in_codomf s2)].
-  admit.
-  rewrite Hs2.
-  have Hs : s2 = [`fset_eq_inl _
-                    (fsubsetP (f_sites_in_cod h) _
-                       (in_codomf [`fset_eq_inl
-                                     (f_sites_total h) (fsvalP s)]))].
-  admit.
-  rewrite Hs ?(codEdom) //= => sites_codEdom.
-
-Admitted.
 Next Obligation.
 Admitted.
 
@@ -196,17 +152,11 @@ Admitted.
       ; f_sites_total : sites dom = domf f_sites
       ; f_nodes_in_cod : codomf f_nodes `<=` nodes cod
       ; f_sites_in_cod : codomf f_sites `<=` sites cod
-      ; comm :
-        [forall s : sites dom,
-            f_nodes.[? siteMap dom s] ==
-              if f_sites.[? val s] is Some s'
-              then (siteMap cod).[? s'] else None]
+      ; comm : smfn = fssm
       ; edge_pres :
         [forall s : sites dom, forall t : sites dom,
             edges dom (val s) (val t) ==
-              if (f_sites.[? val s], f_sites.[? val t])
-                   is (Some s', Some t')
-              then edges cod s' t' else false]
+              edges cod (f_sites.[sf s]) (f_sites.[sf t])]
 
 End Composition.
 End NS.
