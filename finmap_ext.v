@@ -162,15 +162,6 @@ Definition fcomp : {fmap K -> V2} :=
 Lemma fcomp_domf : domf fcomp = domf f.
 Proof using Type. done. Qed.
 
-(* Lemma fcompEfg (k : K) (kIf : k \in domf f) (fkIg : f.[kIf] \in g) : *)
-(*   fcomp.[kIf] = g.[fkIg]. *)
-(* Proof using Type. rewrite ffunE. apply: eq_getf. Qed. *)
-
-(* Lemma fdecomp (k : domf f) : *)
-(*   exists fkIg : f.[fsvalP k] \in g, *)
-(*     fcomp k = g.[fkIg]. *)
-(* Proof using Type. Admitted. *)
-
 Lemma fcomp_codomf : codomf fcomp `<=` codomf g.
 Proof using Type.
   apply/fsubsetP => v2. move/codomfP => [k /fndSomeP[kIf fckEv2]].
@@ -190,12 +181,26 @@ End Composition.
 Section CompositionOf2.
 Variables (K V1 V2 : choiceType)
   (f : {fmap K -> V1}) (g : {fmap V1 -> V2})
-  (fcodIgdom : codomf f `<=` domf g)
-  (f' : {fmap K -> V1})
+  (fcodIgdom : codomf f `<=` domf g).
+
+Section Pre.
+Variables (f' : {fmap K -> V1})
   (f'codIgdom : codomf f' `<=` domf g).
 
-(* Lemma fcompE1 : f = f' -> fcomp fcodIgdom = fcomp f'codIgdom. *)
+Lemma fcomp_eqf (fEf' : f = f') (k : K) :
+  (fcomp fcodIgdom).[? k] = (fcomp f'codIgdom).[? k].
+Proof using Type. by rewrite !fdecomp fEf'. Qed.
+End Pre.
 
+Section Post.
+Variables (g' : {fmap V1 -> V2})
+  (fcodIg'dom : codomf f `<=` domf g').
+
+Lemma fcomp_eqg (gEg' : g = g') (k : K) :
+  (fcomp fcodIgdom).[? k] = (fcomp fcodIg'dom).[? k].
+Proof using Type. by rewrite !fdecomp gEg'. Qed.
+
+End Post.
 End CompositionOf2.
 Section CompositionOf3.
 Variables (K V1 V2 V3 : choiceType)
@@ -205,15 +210,11 @@ Variables (K V1 V2 V3 : choiceType)
   (fgcodIhdom : codomf (fcomp fcodIgdom) `<=` domf h)
   (fcodIghdom : codomf f `<=` domf (fcomp gcodIhdom)).
 
-Lemma fcompA_fnd (k : K) :
+Lemma fcompA (k : K) :
   (@fcomp K V1 V3 f (fcomp gcodIhdom) fcodIghdom).[? k] =
   (@fcomp K V2 V3 (fcomp fcodIgdom) h fgcodIhdom).[? k].
 Proof using Type.
   rewrite !fdecomp. case: f.[? k] => // v1. by rewrite fdecomp.
 Qed.
-
-Lemma fcompA : @fcomp K V1 V3 f (fcomp gcodIhdom) fcodIghdom =
-               @fcomp K V2 V3 (fcomp fcodIgdom) h fgcodIhdom.
-Proof using Type. apply/fmapP. apply: fcompA_fnd. Qed.
 
 End CompositionOf3.

@@ -124,6 +124,10 @@ Next Obligation. (* comm *)
   - apply: fsubset_trans. apply: fcomp_codomf.
     rewrite codEdom. by apply: (eq_fsubsetLR (f_nodes_total h')).
   set steps := @fcomp S N N (fssm h) (f_nodes h') c1Idfn.
+  have cfsIc1 : codomf (f_sites h) `<=` domf (smfn h').
+  - apply: fsubset_trans. apply: (f_sites_in_cod h).
+    by rewrite codEdom.
+  set stepsA := @fcomp S S N (f_sites h) (smfn h') cfsIc1.
   have c2Idfn : codomf (smfn h) `<=` domf (f_nodes h').
   - apply: fsubset_trans. apply: fcomp_codomf.
     by apply: comp_obligation_2.
@@ -132,19 +136,22 @@ Next Obligation. (* comm *)
   - apply: fsubset_trans. apply: (f_sites_in_cod h).
     rewrite codEdom. by apply: (eq_fsubsetLR (f_sites_total h')).
   set cfssmA := @fcomp S S N (f_sites h) (fssm h') cfnIc2.
-  have -> : csmfn.[? s] = csmfnA.[? s] by apply: fcompA_fnd.
-  have -> : csmfnA.[? s] = steps.[? s]. admit.
-  have -> : steps.[? s] = cfssmA.[? s]. admit.
-  have -> : cfssmA.[? s] = cfssm.[? s]. admit.
+  have -> : csmfn.[? s] = csmfnA.[? s] by apply: fcompA.
+  have -> : csmfnA.[? s] = steps.[? s]
+    by apply: (fcomp_eqf _ _ (comm h)).
+  have <- : stepsA.[? s] = steps.[? s].
+  - rewrite fcompA. apply: fsubset_trans. apply: fcomp_codomf.
+    by apply: (eq_fsubsetLR (f_nodes_total h')).
+    have sm2 : siteMap (dom h') = siteMap (cod h)
+      by rewrite codEdom.
+    have c1E : @fcomp S S N (f_sites h) (siteMap (dom h')) cfsIc1 =
+                 fssm h by apply/fmapP; apply: (fcomp_eqg _ _ sm2).
+    move=> c2Idfn'. by rewrite (fcomp_eqf _ _ c1E).
+  have -> : stepsA.[? s] = cfssmA.[? s]
+    by apply (fcomp_eqg _ _ (comm h')).
+  have -> : cfssmA.[? s] = cfssm.[? s] by apply: fcompA.
   done.
-Admitted.
-
-      ; f_nodes_total : nodes dom = domf f_nodes
-      ; f_sites_total : sites dom = domf f_sites
-      ; f_nodes_in_cod : codomf f_nodes `<=` nodes cod
-      ; f_sites_in_cod : codomf f_sites `<=` sites cod
-      ; comm : smfn = fssm
-
+Qed.
 Next Obligation.
 Admitted.
 
