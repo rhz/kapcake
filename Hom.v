@@ -29,8 +29,8 @@ Record hom : Type :=
       ; f_nodes_total : nodes dom = domf f_nodes
       ; f_sites_in_cod : codomf f_sites `<=` sites cod
       ; f_nodes_in_cod : codomf f_nodes `<=` nodes cod
-      ; sf (s : sites dom) := fset_eq_inl f_sites_total (fsvalP s)
-      ; nf (n : nodes dom) := fset_eq_inl f_nodes_total (fsvalP n)
+      ; sf (s : sites dom) := fset_eq_inLR f_sites_total (fsvalP s)
+      ; nf (n : nodes dom) := fset_eq_inLR f_nodes_total (fsvalP n)
       ; fs (s : S) (sIc : s \in codomf f_sites) :=
           fsubsetP f_sites_in_cod _ sIc
       ; fn (n : N) (nIc : n \in codomf f_nodes) :=
@@ -150,20 +150,20 @@ Next Obligation. (* comm *)
   have -> : stepsA.[? s] = cfssmA.[? s]
     by apply (fcomp_eqg _ _ (comm h')).
   have -> : cfssmA.[? s] = cfssm.[? s] by apply: fcompA.
-  done.
-Qed.
+  done. Qed.
 Next Obligation.
-Admitted.
-
-      ; f_nodes_total : nodes dom = domf f_nodes
-      ; f_sites_total : sites dom = domf f_sites
-      ; f_nodes_in_cod : codomf f_nodes `<=` nodes cod
-      ; f_sites_in_cod : codomf f_sites `<=` sites cod
-      ; comm : smfn = fssm
-      ; edge_pres :
-        [forall s : sites dom, forall t : sites dom,
-            edges dom (val s) (val t) ==
-              edges cod (f_sites.[sf s]) (f_sites.[sf t])]
+  apply/'forall_forallP => s t. apply/eqP.
+  move: (edge_pres h) => /'forall_'forall_eqP eph.
+  move: (edge_pres h') => /'forall_'forall_eqP eph'.
+  rewrite (eph s t) codEdom.
+  pose inh' xIs := fset_eq_inRL (f_sites_total h')
+                     (fsubsetP comp_obligation_1 _ xIs).
+  have -> : f_sites h [`sf s] = val [`inh' _ (im (sf s))] by [].
+  have -> : f_sites h [`sf t] = val [`inh' _ (im (sf t))] by [].
+  rewrite (eph' [`inh' _ (im (sf s))]
+                [`inh' _ (im (sf t))]) !ffunE.
+  congr edges; apply: eq_getf.
+Qed.
 
 End Composition.
 End NS.

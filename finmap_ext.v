@@ -61,13 +61,13 @@ Proof using Type.
   apply/idP/idP; by apply: fsubsetP.
 Qed.
 
-Lemma fset_eq_inl A B (AEB : A = B) x : (x \in A) -> (x \in B).
+Lemma fset_eq_inLR A B (AEB : A = B) x : (x \in A) -> (x \in B).
 Proof using Type.
   move/eqP: AEB. rewrite eqEfsubset => /andP[AIB BIA].
   by apply: fsubsetP.
 Qed.
 
-Lemma fset_eq_inr A B (AEB : A = B) x : (x \in B) -> (x \in A).
+Lemma fset_eq_inRL A B (AEB : A = B) x : (x \in B) -> (x \in A).
 Proof using Type.
   move/eqP: AEB. rewrite eqEfsubset => /andP[AIB BIA].
   by apply: fsubsetP.
