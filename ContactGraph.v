@@ -32,9 +32,9 @@ Definition eq_sym (T : eqType) (p1 p2 : (T * T)) : bool :=
 Notation "p1 =sym= p2" := (eq_sym p1 p2)
   (at level 70, no associativity).
 
-Section NS.
+Section SN.
 (* Types for nodes and sites *)
-Variables (N S : choiceType).
+Variables (S N : choiceType).
 
 (* Contact graphs *)
 Record cg : Type :=
@@ -52,7 +52,10 @@ Section CG.
 Variable (g : cg).
 Definition nodes : {fset N} := codomf (siteMap g).
 Definition sites : {fset S} := domf (siteMap g).
-Definition sites_of (n : N) : {fset sites} := preimage_of (siteMap g) n.
+Definition sites_of (n : N) : {fset sites} :=
+  preimage_of (siteMap g) n.
+Definition is_free (s : S) : bool :=
+  [forall t : sites, edges g s (val t) == false].
 
 Definition add_sites (m : {fmap S -> N}) : cg :=
   @CG (siteMap g + m) (edges g) (edges_sym g)
@@ -95,7 +98,7 @@ Next Obligation.
 Qed.
 
 End CG.
-End NS.
+End SN.
 
 (* Lemmas for contact graphs.
  * add_nodeN: add_node and nodes.
@@ -106,8 +109,8 @@ End NS.
  * remove_nodeE: add_node and edges.
  *)
 (* Module Lemmata. *)
-Section CG_NS.
-Variables (N S : choiceType) (g : cg N S).
+Section CG_SN.
+Variables (S N : choiceType) (g : cg S N).
 Implicit Types (n : N) (ss : {fset S}).
 
 Lemma in_sites_of n (s : sites g) :
@@ -264,11 +267,11 @@ Lemma remove_edgeE (s t : S) :
                 then false else edges g x y).
 Proof using Type. done. Qed.
 
-End CG_NS.
+End CG_SN.
 (* End Lemmata. *)
 
 Section Realisable.
-Variables (N S : choiceType) (g : cg N S).
+Variables (S N : choiceType) (g : cg S N).
 
 (* Definition no_self_loop : bool := *)
 (*   [forall s : sites g, edges g (val s) (val s) == false]. *)

@@ -88,6 +88,17 @@ Proof using Type. move/eqP. by rewrite eqEfsubset => /andP[_ H]. Qed.
 
 End FinSet.
 
+(* Finite functions *)
+Section FinFun.
+Variables (A B C : finType).
+
+Definition ffcomp (f : {ffun A -> B}) (g : {ffun B -> C})
+  : {ffun A -> C} := [ffun x => g (f x)].
+
+End FinFun.
+Notation "f \c g" := (ffcomp f g)
+  (at level 60, right associativity).
+
 (* Finite maps *)
 (* Extra lemmas for finite maps.
  * codomf_cat will be soon integrated into mathcomp.finmap.
@@ -148,6 +159,9 @@ Qed.
 (* instead of a value of type `domf f`. *)
 Lemma im f (k : K) (kId : k \in domf f) : f.[kId] \in codomf f.
 Proof using Type. by apply: in_codomf. Qed.
+
+Definition im' f (k : domf f) : codomf f := [`in_codomf k].
+Notation "[ x ; f1 ; .. ; fn ]" := (fn (.. (f1 x) ..)).
 
 End FinMap.
 Section Composition.
