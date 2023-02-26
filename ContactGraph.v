@@ -3,34 +3,8 @@ From KapCake Require Import finmap_ext.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-(* Set Printing Coercions. *)
-(* Set Printing Implicit. *)
-(* Module ContactGraphs. *)
-
 Local Open Scope fset.
 Local Open Scope fmap.
-
-(* Symmetric relations *)
-Definition symb (T : finType) (R : rel T) :=
-  [forall x, forall y, R x y == R y x].
-
-Definition symmetric (T : Type) (R : rel T) :=
-  forall x y, R x y == R y x.
-
-Lemma symP (T : finType) (R : rel T) :
-  reflect (symmetric R) (symb R).
-Proof. by apply: (iffP 'forall_forallP). Qed.
-
-Definition rel0 (T : Type) (_ _ : T) := false.
-Lemma rel0_sym (T : Type) : symmetric (@rel0 T).
-Proof. done. Qed.
-
-Definition eq_sym (T : eqType) (p1 p2 : (T * T)) : bool :=
-  match p1, p2 with
-    (x, y), (z, w) => ((x == z) && (y == w)) ||
-                      ((y == z) && (x == w)) end.
-Notation "p1 =sym= p2" := (eq_sym p1 p2)
-  (at level 70, no associativity).
 
 Section SN.
 (* Types for nodes and sites *)
@@ -56,6 +30,7 @@ Definition sites_of (n : N) : {fset sites} :=
   preimage_of (siteMap g) n.
 Definition is_free (s : S) : bool :=
   [forall t : sites, edges g s (val t) == false].
+Coercion sites_to_val (s : sites) : S := val s.
 
 Definition add_sites (m : {fmap S -> N}) : cg :=
   @CG (siteMap g + m) (edges g) (edges_sym g)
@@ -86,7 +61,7 @@ Program Definition add_edge (s t : S) : cg :=
     (fun x y => ((x, y) =sym= (s, t)) || (edges g x y)) _
     (wildcards g) (w_in_sites g).
 Next Obligation.
-  move=> x y. by rewrite [_ && _ || _]orbC (eqP (edges_sym g x y)).
+  move=> x y. by rewrite /sym_eq [_ && _ || _]orbC (edges_sym g x y).
 Qed.
 
 Program Definition remove_edge (s t : S) : cg :=
@@ -94,7 +69,7 @@ Program Definition remove_edge (s t : S) : cg :=
     (fun x y => if (x, y) =sym= (s, t) then false else edges g x y) _
     (wildcards g) (w_in_sites g).
 Next Obligation.
-  move=> x y. by rewrite [_ && _ || _]orbC (eqP (edges_sym g x y)).
+  move=> x y. by rewrite /sym_eq [_ && _ || _]orbC (edges_sym g x y).
 Qed.
 
 End CG.
@@ -273,24 +248,39 @@ End CG_SN.
 Section Realisable.
 Variables (S N : choiceType) (g : cg S N).
 
-(* Definition no_self_loop : bool := *)
-(*   [forall s : sites g, edges g (val s) (val s) == false]. *)
-(* Definition at_most_one_edge_per_site : bool := *)
-(*   [forall s : sites g, forall t : sites g, forall t' : sites g, *)
-(*       edges g (val s) (val t) && edges g (val s) (val t') *)
-(*         ==> (t == t')]. *)
-
 Definition is_realisable : bool :=
-  (* no_self_loop && at_most_one_edge_per_site. *)
   (* no self loop *)
-  [forall s : sites g, edges g (val s) (val s) == false] &&
+  [forall s : sites g, ~~(edges g s s)] &&
   (* at most 1 incident edge per site *)
   [forall s : sites g, forall t : sites g, forall t' : sites g,
-      edges g (val s) (val t) && edges g (val s) (val t')
-        ==> (t == t')] &&
-  (* wildcard sites aren't bound *)
-  [forall s : sites g, (val s \in wildcards g) ==>
-    [forall t : sites g, edges g (val s) (val t) == false]].
+      edges g s t && edges g s t' ==> (t == t')].
+  (* [&& (* no self loop *) *)
+  (*     [forall s : sites g, ~~(edges g s s)], *)
+  (*     (* at most 1 incident edge per site *) *)
+  (*     [forall s : sites g, forall t : sites g, forall t' : sites g, *)
+  (*         edges g s t && edges g s t' ==> (t == t')] *)
+  (*     (* wildcard sites aren't bound *) *)
+  (*   & [forall s : sites g, (val s \in wildcards g) ==> *)
+  (*         [forall t : sites g, ~~(edges g s t)]]]. *)
+
+Definition IsRealisable : Prop :=
+  (forall s : sites g, ~~(edges g s s)) /\
+  (forall s t t' : sites g,
+      edges g s t && edges g s t' -> t = t').
+  (* [/\ (forall s : sites g, ~~(edges g s s)), *)
+  (*     (forall s t t' : sites g, *)
+  (*         edges g s t && edges g s t' -> t = t') *)
+  (*   & (forall s : sites g, val s \in wildcards g -> *)
+  (*         (forall t : sites g, ~~(edges g s t)))]. *)
+
+Lemma realP : reflect IsRealisable is_realisable.
+Proof using Type.
+  exact: (andPP forallP
+            'forall_'forall_'forall_(implyPP idP eqP)).
+  (* exact: (and3PP forallP *)
+  (*           'forall_'forall_'forall_(implyPP idP eqP) *)
+  (*           'forall_(implyPP idP forallP)). *)
+Qed.
 
 End Realisable.
 
@@ -298,24 +288,21 @@ End Realisable.
 Module SGNotations.
 
 Declare Custom Entry siteMapping.
-Notation "[ T | s1 , .. , s2 |]" :=
+Notation "[ T | s1 , .. , sn |]" :=
   (let e := empty [choiceType of T] [choiceType of T]
-   in (add_site .. (add_site e (snd s1) (fst s1)) ..
-         (snd s2) (fst s2)))
-    (at level 0, s1 custom siteMapping, s2 custom siteMapping).
-Notation "s -> u" := ((s, u)) (in custom siteMapping at level 2,
+   in (add_site .. (add_site e s1.2 s1.1) .. sn.2 sn.1))
+    (at level 0, s1 custom siteMapping, sn custom siteMapping).
+Notation "s -> u" := (s, u) (in custom siteMapping at level 2,
                            s constr at level 1, u constr at level 1).
 
 Declare Custom Entry edge.
-Notation "[ T | s1 , .. , s2 | e1 , .. , e2 |]" :=
+Notation "[ T | s1 , .. , sn | e1 , .. , en |]" :=
   (let e := empty [choiceType of T] [choiceType of T] in
-   let g := (add_site .. (add_site e (snd s1) (fst s1)) ..
-               (snd s2) (fst s2))
-   in (add_edge .. (add_edge g (fst e1) (snd e1)) ..
-         (fst e2) (snd e2)))
-    (at level 0, s1 custom siteMapping, s2 custom siteMapping,
-      e1 custom edge, e2 custom edge).
-Notation "s1 -- s2" := ((s1, s2)) (in custom edge at level 2,
+   let g := (add_site .. (add_site e s1.2 s1.1) .. sn.2 sn.1)
+   in (add_edge .. (add_edge g e1.1 e1.2) .. en.1 en.2))
+    (at level 0, s1 custom siteMapping, sn custom siteMapping,
+      e1 custom edge, en custom edge).
+Notation "s1 -- s2" := (s1, s2) (in custom edge at level 2,
                              s1 constr at level 1,
                              s2 constr at level 1).
 End SGNotations.
@@ -326,10 +313,6 @@ Definition g1 := [nat| 0 -> 0, 1 -> 1 |].
 Definition g2 := [nat| 0 -> 0, 1 -> 1 | 0 -- 1 |].
 
 (* Print g1. Print g2. *)
-(* why does the next line take forever? *)
-(* Compute (sites g1). *)
 (* Goal is_realisable g1 == true. *)
-(*   by rewrite /is_realisable /= /rel0 eqxx !forall_true. *)
+(*   by rewrite /is_realisable !forall_true. *)
 (* Qed. *)
-
-(* End ContactGraphs. *)

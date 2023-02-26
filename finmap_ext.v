@@ -1,7 +1,5 @@
 From KapCake Require Export mathcomp_ext.
-(* TODO: why is eqtype needed on the next line when it should *)
-(* have been exported by the previous line? *)
-From mathcomp Require Export eqtype choice ssrfun finfun finmap.
+From mathcomp Require Export choice finmap.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -88,22 +86,7 @@ Proof using Type. move/eqP. by rewrite eqEfsubset => /andP[_ H]. Qed.
 
 End FinSet.
 
-(* Finite functions *)
-Section FinFun.
-Variables (A B C : finType).
-
-Definition ffcomp (f : {ffun A -> B}) (g : {ffun B -> C})
-  : {ffun A -> C} := [ffun x => g (f x)].
-
-End FinFun.
-Notation "f \c g" := (ffcomp f g)
-  (at level 60, right associativity).
-
 (* Finite maps *)
-(* Extra lemmas for finite maps.
- * codomf_cat will be soon integrated into mathcomp.finmap.
- * codomf_const: codomf of constant map.
- *)
 Section FinMap.
 Variables (K V : choiceType).
 Implicit Types (f g : {fmap K -> V}) (v : V).
@@ -157,11 +140,9 @@ Qed.
 
 (* Similar to in_codomf but it works on `k \in domf f` *)
 (* instead of a value of type `domf f`. *)
-Lemma im f (k : K) (kId : k \in domf f) : f.[kId] \in codomf f.
-Proof using Type. by apply: in_codomf. Qed.
-
-Definition im' f (k : domf f) : codomf f := [`in_codomf k].
-Notation "[ x ; f1 ; .. ; fn ]" := (fn (.. (f1 x) ..)).
+(* Lemma im f (k : K) (kId : k \in domf f) : f.[kId] \in codomf f. *)
+(* Proof using Type. by apply: in_codomf. Qed. *)
+(* Definition im' f (k : domf f) : codomf f := [`in_codomf k]. *)
 
 End FinMap.
 Section Composition.
@@ -232,3 +213,22 @@ Proof using Type.
 Qed.
 
 End CompositionOf3.
+
+Record funlike (K V : finType) := { fn : {ffun K -> V} }.
+(* | Fun (f : K -> V) *)
+(* | FFun of {ffun K -> V}. *)
+(* | FMap (f : {fmap K -> V}). *)
+(* Coercion fun_to_funlike (f : K -> V) := Fun f. *)
+Coercion ffun_to_funlike (K V : finType) (f : {ffun K -> V}) :=
+  {| fn := f |}.
+Coercion fmap_to_funlike (K V : choiceType) (f : {fmap K -> V}) :=
+  {| fn := [ffun k : domf f => [`in_codomf k]] |}.
+
+Definition comp (K V W : finType) (f : funlike K V) (g : funlike V W)
+  : funlike K W := {| fn := (fn f) \c (fn g) |}.
+
+(* Notation "[ x ; f1 ]" := (fn f1 x). *)
+(* Notation "[ x ; f1 ; .. ; fi ; fj ]" := *)
+(*   (fn (comp f1 .. (comp fi fj) ..) x). *)
+Notation "[ f1 ; .. ; fi ; fj ]" :=
+  (fn (comp f1 .. (comp fi fj) ..)).
