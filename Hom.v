@@ -23,12 +23,8 @@ Variables (S N : choiceType).
 Record hom (dom cod : cg S N) : Type :=
   Hom { f_sites : {ffun sites dom -> sites cod}
       ; f_nodes : {ffun nodes dom -> nodes cod}
-      ; comm :
-        (* [forall s : sites dom, *)
-            (* f_nodes.[in_codomf s] == *)
-            (* [`in_codomf (f_sites s)]] *)
-            [siteMap dom ; f_nodes] =
-            [f_sites ; siteMap cod]
+      ; comm : [siteMap dom ; f_nodes] =
+               [f_sites ; siteMap cod]
       ; edge_pres :
         [forall s : sites dom, forall t : sites dom,
             edges dom s t ==
@@ -75,23 +71,20 @@ Qed.
 End Composition.
 
 Section ContactMap.
-Variables (dom cod : cg S N) (h : hom dom cod).
+(* Definition is_contact_map (dom cod : cg S N) (h : hom dom cod) *)
+(*   : bool := is_realisable dom. *)
+Variable (contact_graph : cg S N).
 
-Definition is_contact_map : bool :=
-  (* if (dom h) is realisable *)
-  is_realisable dom. (* && *)
-  (* node-local injectivity on sites? *)
-  (* ie whenever f_sites s = f_sites t and *)
-  (* siteMap dom s = siteMap dom t, then s = t. *)
-  (* I think we can get rid of this restriction. *)
-  (* [forall s : sites dom, forall t : sites dom, *)
-  (*     (f_sites h s == f_sites h t) && *)
-  (*     (siteMap dom s == siteMap dom t) *)
-  (*       ==> (s == t)]. *)
+Record cm :=
+  CM { graph : cg S N
+     ; dom_is_realisable : is_realisable graph
+     ; cmap :> hom graph contact_graph
+    }.
 
 End ContactMap.
 
 Section Embedding.
+Section IsEmb.
 Variables (dom cod : cg S N) (h : hom dom cod).
 
 (* A homomorphism ψ : G → G' is an embedding iff *)
@@ -131,6 +124,19 @@ Proof using Type.
   - move=> s t t'. rewrite !eph => /(atmost1e _ _ _) ftEft'.
     by apply: fs_inj.
 Qed.
+End IsEmb.
+
+(* lifted embedding *)
+Record emb (contact_graph : cg S N) :=
+  Emb { emb_dom : cm contact_graph
+      ; emb_cod : cm contact_graph
+      ; emb_hom :> hom (graph emb_dom) (graph emb_cod)
+      ; hom_is_emb : is_embedding emb_hom
+      ; fs_comm : [f_sites emb_hom ; f_sites (cmap emb_cod)] =
+                  f_sites (cmap emb_dom)
+      ; fn_comm : [f_nodes emb_hom ; f_nodes (cmap emb_cod)] =
+                  f_nodes (cmap emb_dom)
+    }.
 
 End Embedding.
-End NS.
+End SN.
