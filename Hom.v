@@ -76,7 +76,7 @@ Section ContactMap.
 Variable (contact_graph : cg S N).
 
 Record cm :=
-  CM { graph : cg S N
+  CM { graph :> cg S N
      ; dom_is_realisable : is_realisable graph
      ; cmap :> hom graph contact_graph
     }.
@@ -127,15 +127,14 @@ Qed.
 End IsEmb.
 
 (* lifted embedding *)
-Record emb (contact_graph : cg S N) :=
-  Emb { emb_dom : cm contact_graph
-      ; emb_cod : cm contact_graph
-      ; emb_hom :> hom (graph emb_dom) (graph emb_cod)
-      ; hom_is_emb : is_embedding emb_hom
-      ; fs_comm : [f_sites emb_hom ; f_sites (cmap emb_cod)] =
-                  f_sites (cmap emb_dom)
-      ; fn_comm : [f_nodes emb_hom ; f_nodes (cmap emb_cod)] =
-                  f_nodes (cmap emb_dom)
+Record emb (contact_graph : cg S N)
+  (source target : cm contact_graph) :=
+  Emb { ehom :> hom (graph source) (graph target)
+      ; hom_is_emb : is_embedding ehom
+      ; fs_comm : [f_sites ehom ; f_sites target] =
+                  f_sites source
+      ; fn_comm : [f_nodes ehom ; f_nodes target] =
+                  f_nodes source
     }.
 
 End Embedding.
