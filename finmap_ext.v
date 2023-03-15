@@ -84,17 +84,18 @@ Proof using Type. move/eqP. by rewrite eqEfsubset => /andP[H _]. Qed.
 Lemma eq_fsubsetRL A B : A = B -> B `<=` A.
 Proof using Type. move/eqP. by rewrite eqEfsubset => /andP[_ H]. Qed.
 
+Definition preimage_of (A : finType) (B : eqType)
+  (f : {ffun A -> B}) (v : B) : {fset A} :=
+  [fset k : A | f k == v].
+Notation "f ^-1 v" := (preimage_of f v)
+                        (at level 70, right associativity).
+
 End FinSet.
 
 (* Finite maps *)
 Section FinMap.
 Variables (K V : choiceType).
 Implicit Types (f g : {fmap K -> V}) (v : V).
-
-Definition preimage_of f v : {fset (domf f)} :=
-  [fset k | k : domf f & f k == v].
-Notation "f ^-1 v" := (preimage_of f v)
-                        (at level 70, right associativity).
 
 Lemma codomf_cat f g :
   codomf (f + g) = codomf g `|` codomf f.[\domf g].
