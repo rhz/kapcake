@@ -1,5 +1,5 @@
 From KapCake Require Export mathcomp_ext.
-From mathcomp Require Export choice finmap.
+From mathcomp Require Export finmap.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
