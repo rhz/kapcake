@@ -52,38 +52,24 @@ Lemma forall_orb (T : finType) (P Q : T -> bool) :
   [forall x : T, P x] || [forall x : T, Q x].
 Proof. Admitted.
 
-(* Variables (T1 T2 : choiceType) (A : {fset T1}). *)
-(* Hypothesis (f : A -> {fset T2}). *)
-(* Variable i0 : A. *)
-(* Check #|`f i0|. *)
-(* Check [arg min_(x < i0 in A) #|`f x|]. *)
-
-(* Variant extremum_spec {T : eqType} (ord : rel T) *)
-(*   {I : finType} (P : pred I) (F : I -> T) : I -> Type := *)
-(*   ExtremumSpec (i : I) of P i & *)
-(*     (forall j : I, P j -> ord (F i) (F j)) : *)
-(*     extremum_spec ord P F i. *)
 Variant extremum_spec {T : eqType} (ord : rel T)
   {I : finType} (P : pred I) (F : I -> T)
   : option I -> Type :=
   | Extremum i of P i & (forall j : I, P j -> ord (F i) (F j))
       : extremum_spec ord P F (Some i)
   | NoExtremum of P =1 xpred0 : extremum_spec ord P F None.
+
 Let arg_pred {T : eqType} ord {I : finType} (P : pred I) (F : I -> T) :=
   [pred i | P i & [forall (j | P j), ord (F i) (F j)]].
+
 Section Extremum.
 Variables (T : eqType) (ord : rel T)
   (I : finType) (P : pred I) (F : I -> T).
 Definition extremum : option I := pick (arg_pred ord P F).
+
 Hypothesis ord_refl : reflexive ord.
 Hypothesis ord_trans : transitive ord.
 Hypothesis ord_total : total ord.
-(* Lemma extremumP : if extremum is Some e *)
-(*                   then extremum_spec ord P F e else True. *)
-(* Proof. rewrite /extremum. *)
-(*        case: pickP => [i /andP[Pi /'forall_implyP/= min_i] | no_i]. *)
-(*        by split=> // j; apply/implyP. done. *)
-(* Qed. *)
 Lemma extremumP : extremum_spec ord P F extremum.
 Proof using ord_refl ord_total ord_trans.
   rewrite /extremum.
@@ -108,11 +94,13 @@ Proof using ord_refl ord_total ord_trans.
   by rewrite -def_t0 sorted_leq_nth.
 Qed.
 End Extremum.
+
 Section ArgMinMax.
 Variables (I : finType) (P : pred I) (F : I -> nat).
 Definition arg_min := extremum leq P F.
 Definition arg_max := extremum geq P F.
 End ArgMinMax.
+
 Notation "[ 'arg' 'min_' ( i | P ) F ]" :=
   (arg_min (fun i => P%B) (fun i => F))
     (at level 0, i at level 10,
