@@ -52,7 +52,7 @@ Lemma forall_orb (T : finType) (P Q : T -> bool) :
   [forall x : T, P x] || [forall x : T, Q x].
 Proof. Admitted.
 
-Variant extremum_spec {T : eqType} (ord : rel T)
+Variant oextremum_spec {T : eqType} (ord : rel T)
   {I : finType} (P : pred I) (F : I -> T)
   : option I -> Type :=
   | Extremum i of P i & (forall j : I, P j -> ord (F i) (F j))
@@ -62,15 +62,15 @@ Variant extremum_spec {T : eqType} (ord : rel T)
 Let arg_pred {T : eqType} ord {I : finType} (P : pred I) (F : I -> T) :=
   [pred i | P i & [forall (j | P j), ord (F i) (F j)]].
 
-Section Extremum.
+Section OExtremum.
 Variables (T : eqType) (ord : rel T)
   (I : finType) (P : pred I) (F : I -> T).
-Definition extremum : option I := pick (arg_pred ord P F).
+Definition oextremum : option I := pick (arg_pred ord P F).
 
 Hypothesis ord_refl : reflexive ord.
 Hypothesis ord_trans : transitive ord.
 Hypothesis ord_total : total ord.
-Lemma extremumP : extremum_spec ord P F extremum.
+Lemma oextremumP : extremum_spec ord P F extremum.
 Proof using ord_refl ord_total ord_trans.
   rewrite /extremum.
   case: pickP => [i /andP[Pi /'forall_implyP xtrm]|].
@@ -93,12 +93,12 @@ Proof using ord_refl ord_total ord_trans.
       by rewrite mem_sort map_f ?mem_enum.
   by rewrite -def_t0 sorted_leq_nth.
 Qed.
-End Extremum.
+End OExtremum.
 
 Section ArgMinMax.
 Variables (I : finType) (P : pred I) (F : I -> nat).
-Definition arg_min := extremum leq P F.
-Definition arg_max := extremum geq P F.
+Definition arg_min := oextremum leq P F.
+Definition arg_max := oextremum geq P F.
 End ArgMinMax.
 
 Notation "[ 'arg' 'min_' ( i | P ) F ]" :=
