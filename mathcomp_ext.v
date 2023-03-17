@@ -56,8 +56,8 @@ Variant oextremum_spec {T : eqType} (ord : rel T)
   {I : finType} (P : pred I) (F : I -> T)
   : option I -> Type :=
   | Extremum i of P i & (forall j : I, P j -> ord (F i) (F j))
-      : extremum_spec ord P F (Some i)
-  | NoExtremum of P =1 xpred0 : extremum_spec ord P F None.
+      : oextremum_spec ord P F (Some i)
+  | NoExtremum of P =1 xpred0 : oextremum_spec ord P F None.
 
 Let arg_pred {T : eqType} ord {I : finType} (P : pred I) (F : I -> T) :=
   [pred i | P i & [forall (j | P j), ord (F i) (F j)]].
@@ -70,9 +70,9 @@ Definition oextremum : option I := pick (arg_pred ord P F).
 Hypothesis ord_refl : reflexive ord.
 Hypothesis ord_trans : transitive ord.
 Hypothesis ord_total : total ord.
-Lemma oextremumP : extremum_spec ord P F extremum.
+Lemma oextremumP : oextremum_spec ord P F oextremum.
 Proof using ord_refl ord_total ord_trans.
-  rewrite /extremum.
+  rewrite /oextremum.
   case: pickP => [i /andP[Pi /'forall_implyP xtrm]|].
   constructor => //.
   rewrite /eqfun /= => no_i. constructor.
